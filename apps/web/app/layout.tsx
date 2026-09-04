@@ -26,12 +26,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/datenschutz" className="hover:text-gold">
                 Datenschutz
               </Link>
+              <Link href="/nutzungsbedingungen" className="hover:text-gold">
+                Nutzungsbedingungen
+              </Link>
             </div>
           </nav>
         </header>
         <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
-        <footer className="mx-auto max-w-6xl px-6 py-8 text-xs text-muted">
-          © 2026 Mirkan Deniz Günkaya · Quellcode unter MIT-Lizenz
+        <footer className="mx-auto flex max-w-6xl flex-wrap gap-x-4 gap-y-1 px-6 py-8 text-xs text-muted">
+          <span>© 2026 Mirkan Deniz Günkaya · Privates, nicht-kommerzielles Projekt · Quellcode unter MIT-Lizenz</span>
+          <Link href="/impressum" className="hover:text-gold">
+            Impressum
+          </Link>
+          <Link href="/datenschutz" className="hover:text-gold">
+            Datenschutz
+          </Link>
+          <Link href="/nutzungsbedingungen" className="hover:text-gold">
+            Nutzungsbedingungen
+          </Link>
         </footer>
       </body>
     </html>

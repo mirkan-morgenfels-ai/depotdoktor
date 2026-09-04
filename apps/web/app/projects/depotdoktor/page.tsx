@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Disclaimer, PRIVACY_SHORT } from "@portfolio/legal";
 import { DepotDoktorApp } from "@/components/depotdoktor/DepotDoktorApp";
 
@@ -21,7 +22,20 @@ export default function DepotDoktorPage() {
         <p className="mt-3 text-sm text-muted">{PRIVACY_SHORT}</p>
       </section>
       <DepotDoktorApp />
-      <Disclaimer variant="long" className="border-t border-line pt-6 text-xs text-muted" />
+      <div className="border-t border-line pt-6 text-xs text-muted">
+        <Disclaimer variant="long" />
+        <p className="mt-2">
+          Mit der Nutzung erkennen Sie die{" "}
+          <Link href="/nutzungsbedingungen" className="underline hover:text-gold">
+            Nutzungsbedingungen
+          </Link>{" "}
+          an. Einzelheiten zur Verarbeitung Ihrer Daten stehen in der{" "}
+          <Link href="/datenschutz" className="underline hover:text-gold">
+            Datenschutzerklärung
+          </Link>
+          .
+        </p>
+      </div>
     </div>
   );
 }

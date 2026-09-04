@@ -30,6 +30,15 @@ Rechtsgrundlagen laut Umsetzungsdokument: § 18 InvStG (Vorabpauschale), § 20 I
 4. **Scalable-Capital-Werte in `type` und `assetType`.** Bekannt aus dem PP-Forum: `Buy`, `Security`. Angenommen: `Sell`, `Distribution`, `Deposit`, `Withdrawal`, `Interest`, `Fee`, `Cash`. Zeilen mit `status` ungleich `Executed` werden übersprungen.
 5. **Assetklasse bei Scalable Capital.** `assetType = Security` unterscheidet nicht zwischen Aktie und ETF; solche Positionen erscheinen als „Nicht zugeordnet“. Fondstyp wählt der Nutzer im Steuerreiter.
 
+## Rechtstexte (Schritt 6), zu verifizieren
+
+Die Texte unter `/impressum`, `/datenschutz` und `/nutzungsbedingungen` wurden ohne juristische Prüfung erstellt. Offene Punkte, die Dennis prüfen oder entscheiden muss:
+
+1. **Impressum ohne Anschrift.** Dennis möchte keine Adresse auf der Seite; genannt sind Name, Ort und E-Mail. § 5 DDG verlangt für „geschäftsmäßige“ Telemedien eine ladungsfähige Anschrift; für rein private, nicht-kommerzielle Seiten gilt die Pflicht nach herrschender Lesart nicht. Eine Portfolio-Seite zur Bewerbung liegt dazwischen. Optionen: (a) so lassen und das Risiko einer Abmahnung tragen, (b) Adresse ergänzen, (c) Impressum-Service mit c/o-Adresse nutzen. Prüfen gegen: BMJ-Leitfaden zur Impressumspflicht, Verbraucherzentrale, e-recht24.
+2. **Vercel als Auftragsverarbeiter.** Anschrift von Vercel Inc. und die Angabe zur Zertifizierung unter dem EU-US Data Privacy Framework gegen https://vercel.com/legal/privacy-policy und https://www.dataprivacyframework.gov prüfen. Ein Auftragsverarbeitungsvertrag (DPA) mit Vercel ist Teil der Vercel-Nutzungsbedingungen; im Dashboard nachsehen, ob er akzeptiert wurde.
+3. **Nutzungsbedingungen.** Ein vollständiger Haftungsausschluss ist nach § 309 Nr. 7 BGB unwirksam; der Text beschränkt die Haftung deshalb auf Vorsatz, grobe Fahrlässigkeit und Personenschäden und verweist für die unentgeltliche Überlassung auf §§ 521, 599 BGB. Ob diese Formulierung trägt, ist juristisch zu prüfen.
+4. **Kontaktadresse.** Im Impressum steht die private Gmail-Adresse. Falls eine eigene Domain kommt, auf eine Adresse dieser Domain umstellen (`packages/legal/src/operator.ts`).
+
 ## Abweichungen vom Umsetzungsdokument
 
 - **Ableitung im Newton-Beispiel (1.3.2).** Das Dokument nennt NPV′(0,08) ≈ −25.833. Nachgerechnet: NPV′(0,08) = 5.000/1,08² − 2 · 17.600/1,08³ = 4.286,69 − 27.942,89 = −23.656,20. Der erste Newton-Schritt landet damit bei 0,0994 statt 0,0978. Am Ergebnis (IRR = 10 %) ändert das nichts; das Dokument sollte korrigiert werden.

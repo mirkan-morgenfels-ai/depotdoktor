@@ -82,3 +82,16 @@ test("Unbekanntes Format bricht mit Meldung ab", async ({ page }) => {
   await expect(page.getByTestId("parse-error")).toContainText("nicht erkannt");
   await expect(page.getByTestId("report-section")).toHaveCount(0);
 });
+
+test("Rechtsseiten sind erreichbar und verlinkt", async ({ page }) => {
+  await page.goto("/projects/depotdoktor");
+  await page.getByRole("link", { name: "Nutzungsbedingungen" }).first().click();
+  await expect(page.getByRole("heading", { name: "Nutzungsbedingungen" })).toBeVisible();
+  await expect(page.getByText("kein Angebot", { exact: false }).first()).toBeVisible();
+  await page.goto("/impressum");
+  await expect(page.getByRole("heading", { name: "Impressum" })).toBeVisible();
+  await expect(page.getByText("mirkandeniz52@gmail.com").first()).toBeVisible();
+  await page.goto("/datenschutz");
+  await expect(page.getByRole("heading", { name: "Datenschutzerklärung" })).toBeVisible();
+  await expect(page.getByText("Vercel Web Analytics und Speed Insights sind nicht aktiviert")).toBeVisible();
+});
