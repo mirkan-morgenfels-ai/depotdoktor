@@ -5,7 +5,7 @@ Clientseitiger Depot-Steuer- und Performance-Analyzer für deutsche Broker-Expor
 [![CI](https://github.com/mirkan-morgenfels-ai/AI-Project-1/actions/workflows/ci.yml/badge.svg)](https://github.com/mirkan-morgenfels-ai/AI-Project-1/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 
-Live-Demo: [Platzhalter: https://<domain>/projects/depotdoktor]
+Live-Demo: https://ai-project-1-web.vercel.app/projects/depotdoktor
 
 **English summary.** DepotDoktor is a browser-only portfolio analyzer for German brokerage CSV exports (Trade Republic and Scalable Capital, more planned). It computes the time-weighted return (TTWROR), the money-weighted return (IRR via Newton's method), volatility, maximum drawdown and asset allocation, and it estimates German fund taxation (Vorabpauschale, Teilfreistellung, FIFO). All computation runs client-side; no data leaves the browser. Built with Next.js and TypeScript, tested with Vitest and Playwright.
 
