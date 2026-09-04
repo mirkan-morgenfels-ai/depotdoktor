@@ -24,9 +24,11 @@ Deutsche Broker liefern keine verständliche, exportierbare Aufstellung, die die
 
 ## Screenshots
 
-[Platzhalter: Screenshot Report-Ansicht, Reiter Performance]
+![Reiter Performance mit Kennzahlen und Wertverlauf](docs/screenshots/performance.png)
 
-[Platzhalter: Screenshot Reiter Steuer mit Vorabpauschale-Tabelle]
+![Reiter Steuer mit Vorabpauschale-Tabelle](docs/screenshots/steuer.png)
+
+Beide Ansichten zeigen die synthetische Trade-Republic-Testdatei aus `packages/csv/fixtures/`.
 
 ## So funktioniert es
 
@@ -96,9 +98,9 @@ pnpm test:e2e
 
 Unit-Tests decken TTWROR, IRR (einschließlich Divergenz-Fallback), Volatilität, Max Drawdown, Vorabpauschale (Normalfall, Wertzuwachs unter Basisertrag, Verlustjahr, unterjähriger Kauf), FIFO, den CSV-Export und den PDF-Report (Textextraktion: Steuertabelle und Disclaimer auf jeder Seite) ab, jeweils mit von Hand gerechneten Erwartungswerten. Die E2E-Tests laden die Testdateien beider Broker hoch, prüfen Kennzahlen und Diagramme in allen Reitern, den PDF- und CSV-Download, die Fehlermeldung bei unbekanntem Format und dass während der Auswertung keine Anfrage die Seite verlässt.
 
-Die Steuerlogik wurde gegen den Vorabpauschale-Rechner der Stiftung Warentest und ein Finanztip-Beispiel geprüft. Abweichungen und offene Fragen sind in `docs/verifikation.md` dokumentiert. [Platzhalter: Datum der letzten Prüfung]
+Die Steuerlogik ist gegen die durchgerechneten Fälle A bis E des Umsetzungsdokuments getestet. Die Prüfung gegen den Vorabpauschale-Rechner der Stiftung Warentest und ein Finanztip-Beispiel steht noch aus; offene Punkte und Abweichungen sind in `docs/verifikation.md` dokumentiert.
 
-Die CI führt bei jedem Pull Request `install → typecheck → lint → test → build` aus.
+Die CI führt bei jedem Push und Pull Request `install → typecheck → lint → test → build` aus und anschließend die Playwright-Tests gegen den gebauten Stand.
 
 ## Projektstruktur
 
