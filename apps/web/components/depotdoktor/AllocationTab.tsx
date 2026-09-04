@@ -1,6 +1,7 @@
 import type { PerformanceReport } from "@/lib/depotdoktor/report";
 import type { AllocationSlice } from "@/lib/depotdoktor/metrics/allocation";
-import { formatEur, formatNumber, formatPercent } from "@/lib/depotdoktor/money";
+import { AllocationBars } from "@portfolio/charts";
+import { d, formatEur, formatNumber, formatPercent } from "@/lib/depotdoktor/money";
 
 function AllocationList({ title, slices, testId }: { title: string; slices: AllocationSlice[]; testId: string }) {
   return (
@@ -9,21 +10,24 @@ function AllocationList({ title, slices, testId }: { title: string; slices: Allo
       {slices.length === 0 ? (
         <p className="text-sm text-muted">Keine bewertbaren Positionen.</p>
       ) : (
-        <ul className="space-y-3">
-          {slices.map((slice) => (
-            <li key={slice.label}>
-              <div className="flex justify-between text-sm">
-                <span>{slice.label}</span>
-                <span className="tabular-nums">
-                  {formatPercent(slice.share)} · {formatEur(slice.value)}
-                </span>
-              </div>
-              <div className="mt-1 h-2 w-full rounded bg-paper">
-                <div className="h-2 rounded bg-green" style={{ width: `${slice.share.times(100).toFixed(2)}%` }} />
-              </div>
-            </li>
-          ))}
-        </ul>
+        <>
+          <AllocationBars
+            slices={slices.map((s) => ({ label: s.label, share: s.share.toNumber(), value: s.value.toDecimalPlaces(2).toNumber() }))}
+            formatShare={(v) => formatPercent(v)}
+            formatValue={(v) => formatEur(d(v))}
+          />
+          <table className="mt-4 w-full text-sm">
+            <tbody>
+              {slices.map((slice) => (
+                <tr key={slice.label} className="border-t border-line">
+                  <td className="py-1.5 pr-4">{slice.label}</td>
+                  <td className="py-1.5 pr-4 text-right tabular-nums">{formatPercent(slice.share)}</td>
+                  <td className="py-1.5 text-right tabular-nums">{formatEur(slice.value)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
       )}
     </section>
   );

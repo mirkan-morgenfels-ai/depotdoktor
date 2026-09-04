@@ -36,8 +36,10 @@ Rechtsgrundlagen laut Umsetzungsdokument: § 18 InvStG (Vorabpauschale), § 20 I
 - **Steuer-Quellen in Kommentaren (CLAUDE.md-Beispiel in 0.3).** Regel 6 der Projektanweisung verbietet Kommentarzeilen. Quellen stehen deshalb in dieser Datei und in den Testnamen.
 - **Floats in den Code-Beispielen (1.7).** Die Skizzen rechnen mit `number`; umgesetzt ist decimal.js für alle Geldbeträge. Nur der IRR-Löser (Nullstellensuche einer Rate) arbeitet mit `number`, die Zahlungsströme werden an der Schnittstelle konvertiert.
 
-## Entscheidungen, die Dennis treffen muss
+## Getroffene Entscheidungen (03.09.2026, von Dennis noch nicht ausdrücklich bestätigt)
 
-1. Depotsicht oder Kontosicht für TTWROR und IRR. Umgesetzt ist die Depotsicht: Käufe, Verkäufe, Dividenden, Gebühren und Steuern sind externe Zahlungsströme; Einzahlungen, Auszahlungen und Zinsen des Verrechnungskontos fließen nicht ein. Empfehlung: dabei bleiben, weil die Vorabpauschale ohnehin nur das Depot betrifft und Kontozinsen die Depotrendite verfälschen würden.
-2. Volatilität und Max Drawdown ohne Tageskurse anzeigen (mit Hinweis) oder ausblenden, bis Kursdaten vorliegen. Umgesetzt: anzeigen mit Hinweis.
-3. README-Widerspruch: „Netzwerk-Tab zeigt keine weiteren Anfragen“ gegenüber „optional Vercel Web Analytics“. Empfehlung: Analytics weglassen, Aussage im README bleibt dann wahr; der E2E-Test prüft, dass keine Anfrage die Seite verlässt.
+1. Depotsicht für TTWROR und IRR: Käufe, Verkäufe, Dividenden, Gebühren und Steuern sind externe Zahlungsströme; Einzahlungen, Auszahlungen und Zinsen des Verrechnungskontos fließen nicht ein. Begründung: Die Vorabpauschale betrifft nur das Depot, Kontozinsen würden die Depotrendite verfälschen.
+2. Volatilität und Max Drawdown werden ohne Tageskurse angezeigt, mit Hinweis in Oberfläche und PDF.
+3. Keine Vercel Web Analytics. Der README-Satz „keine weiteren Anfragen“ bleibt damit wahr; der E2E-Test prüft ihn bei jedem Pull Request.
+4. PDF-Report nutzt die eingebauten PDF-Schriften (Helvetica, Times), damit keine Schriftdatei nachgeladen werden muss. Zeichen außerhalb von WinAnsi (Minuszeichen U+2212, Pfeil, schmale Leerzeichen) werden vor dem Rendern ersetzt.
+5. Diagramme verwenden nur Grün als Datenfarbe (eine Serie je Diagramm). Die Projektpalette (Gold, Grün, Bordeaux, Schwarz) besteht den Farbsehschwäche-Test für mehrfarbige Kategorien nicht; sobald ein Diagramm mehrere Serien braucht, sind Beschriftung oder Muster statt Farbe nötig.

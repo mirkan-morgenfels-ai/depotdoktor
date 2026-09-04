@@ -13,8 +13,10 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@portfolio/charts": "workspace:*",
     "@portfolio/csv": "workspace:*",
     "@portfolio/legal": "workspace:*",
+    "@portfolio/pdf": "workspace:*",
     "@portfolio/ui": "workspace:*",
     "decimal.js": "^10.6.0",
     "next": "^15.5.25",

@@ -14,7 +14,7 @@ Tests: Vitest (Unit), Playwright (E2E). pnpm Workspaces. CI: GitHub Actions. Hos
 - `apps/web/app/projects/depotdoktor/` Seite, Report-Ansicht, Reiter
 - `apps/web/lib/depotdoktor/` Transaktionsmodell, Kennzahlen, Steuerlogik, Unit-Tests in `__tests__/`
 - `packages/csv/` Parser, Broker-Erkennung, Normalisierung, Fixtures
-- `packages/ui/` Basiskomponenten, `packages/charts/` Diagramme, `packages/pdf/` Report-Vorlage, `packages/legal/` Disclaimer, Impressum, Datenschutz
+- `packages/ui/` Basiskomponenten, `packages/charts/` Diagramme (Recharts), `packages/pdf/` Report-Vorlage (@react-pdf/renderer, Daten als reine Strings über `apps/web/lib/depotdoktor/pdf-data.ts`), `packages/legal/` Disclaimer, Datenschutztexte
 - `docs/verifikation.md` Prüfstand der Steuerlogik, offene Punkte, Quellen
 
 ## Regeln
@@ -39,7 +39,7 @@ Tests: Vitest (Unit), Playwright (E2E). pnpm Workspaces. CI: GitHub Actions. Hos
 - `pnpm install`
 - `pnpm dev` Entwicklung unter http://localhost:3000/projects/depotdoktor
 - `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`
-- `pnpm test:e2e` Playwright
+- `pnpm test:e2e` Playwright; ohne installierte Browser `PLAYWRIGHT_CHROMIUM_PATH=/pfad/zu/chromium` setzen
 
 ## Definition of Done
 

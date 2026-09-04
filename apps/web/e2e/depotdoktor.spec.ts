@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 
 const scalableFixture = path.resolve(__dirname, "../../../packages/csv/fixtures/scalable-synthetic.csv");
@@ -23,9 +24,12 @@ test("Beispieldatei: Report mit allen Kennzahlen, kein Upload", async ({ page })
   await expect(page.getByTestId("performance-tab")).toContainText("+2,41 %");
   await expect(page.getByTestId("performance-tab")).toContainText("8.720,00 €");
 
+  await expect(page.getByTestId("value-chart").locator("svg")).toBeVisible();
+
   await page.getByRole("tab", { name: "Allokation" }).click();
   await expect(page.getByTestId("allocation-asset-class")).toContainText("Nicht zugeordnet");
   await expect(page.getByTestId("allocation-region")).toContainText("Irland (Fondsdomizil)");
+  await expect(page.getByTestId("allocation-asset-class").locator("svg")).toBeVisible();
 
   await page.getByRole("tab", { name: "Steuer" }).click();
   await expect(page.getByTestId("tax-position")).toHaveCount(2);
@@ -35,6 +39,24 @@ test("Beispieldatei: Report mit allen Kennzahlen, kein Upload", async ({ page })
   await expect(page.getByTestId("transactions-tab")).toContainText("Dividende");
 
   await expect(page.getByText("Keine Anlage- oder Steuerberatung", { exact: false }).first()).toBeVisible();
+
+  const pdfDownload = page.waitForEvent("download");
+  await page.getByTestId("export-pdf").click();
+  const pdf = await pdfDownload;
+  expect(pdf.suggestedFilename()).toMatch(/^depotdoktor-report-\d{4}-\d{2}-\d{2}\.pdf$/);
+  const pdfPath = await pdf.path();
+  const pdfBytes = readFileSync(pdfPath);
+  expect(pdfBytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+  expect(pdfBytes.byteLength).toBeGreaterThan(5000);
+
+  const csvDownload = page.waitForEvent("download");
+  await page.getByTestId("export-csv").click();
+  const csv = await csvDownload;
+  expect(csv.suggestedFilename()).toMatch(/^depotdoktor-transaktionen-\d{4}-\d{2}-\d{2}\.csv$/);
+  const csvText = readFileSync(await csv.path(), "utf8");
+  expect(csvText.startsWith("\uFEFFdate;datetime;broker;type;isin")).toBe(true);
+  expect(csvText.trim().split("\r\n")).toHaveLength(7);
+
   expect(outgoing).toEqual([]);
 });
 

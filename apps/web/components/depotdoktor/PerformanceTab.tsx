@@ -1,6 +1,7 @@
 import { StatTile } from "@portfolio/ui";
+import { ValueChart } from "@portfolio/charts";
 import type { PerformanceReport } from "@/lib/depotdoktor/report";
-import { formatEur, formatPercent } from "@/lib/depotdoktor/money";
+import { d, formatEur, formatPercent } from "@/lib/depotdoktor/money";
 import { formatDateDe } from "@/lib/depotdoktor/dates";
 import { Notes } from "./Notes";
 
@@ -52,7 +53,16 @@ export function PerformanceTab({ report }: { report: PerformanceReport }) {
 
       <section className="rounded-lg border border-line bg-surface p-6">
         <h2 className="mb-4 font-serif text-xl">Wertverlauf an den Buchungstagen</h2>
-        <div className="overflow-x-auto">
+        <ValueChart
+          points={portfolio.points.map((p) => ({
+            date: p.date,
+            label: formatDateDe(p.date),
+            value: p.value.toDecimalPlaces(2).toNumber(),
+            flow: p.flow.toDecimalPlaces(2).toNumber(),
+          }))}
+          formatValue={(v) => formatEur(d(v))}
+        />
+        <div className="mt-6 overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-muted">
               <tr>

@@ -1,16 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { parseBrokerCsv, type ParseSuccess } from "@portfolio/csv";
 import { Disclaimer } from "@portfolio/legal";
 import { Button } from "@portfolio/ui";
 import { buildReport } from "@/lib/depotdoktor/report";
 import { SAMPLE_CSV_SCALABLE } from "@/lib/depotdoktor/sample";
+import { buildTaxSummary, type PositionSettings } from "@/lib/depotdoktor/tax/summary";
+import { buildReportPdfData, BROKER_LABELS } from "@/lib/depotdoktor/pdf-data";
+import { transactionsToCsv } from "@/lib/depotdoktor/export-csv";
+import { downloadBlob, timestampForFilename } from "@/lib/depotdoktor/download";
 import { FileDrop } from "./FileDrop";
 import { PerformanceTab } from "./PerformanceTab";
 import { AllocationTab } from "./AllocationTab";
-import { TaxTab } from "./TaxTab";
+import { TaxTab, TAX_YEARS } from "./TaxTab";
 import { TransactionsTab } from "./TransactionsTab";
+import { ExportBar } from "./ExportBar";
 
 type TabId = "performance" | "allocation" | "tax" | "transactions";
 
@@ -21,22 +26,22 @@ const TABS: Array<{ id: TabId; label: string }> = [
   { id: "transactions", label: "Transaktionen" },
 ];
 
-const BROKER_LABELS = {
-  traderepublic: "Trade Republic",
-  scalable: "Scalable Capital",
-} as const;
-
 export function DepotDoktorApp() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [parsed, setParsed] = useState<ParseSuccess | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabId>("performance");
+  const [taxYear, setTaxYear] = useState<number>(TAX_YEARS[0] ?? 2026);
+  const [taxSettings, setTaxSettings] = useState<Record<string, PositionSettings>>({});
 
-  const report = useMemo(() => (parsed ? buildReport(parsed.transactions) : null), [parsed]);
+  const transactions = useMemo(() => parsed?.transactions ?? [], [parsed]);
+  const report = useMemo(() => (parsed ? buildReport(transactions) : null), [parsed, transactions]);
+  const taxSummary = useMemo(() => buildTaxSummary(transactions, taxYear, taxSettings), [transactions, taxYear, taxSettings]);
 
   function loadText(text: string, name: string) {
     const result = parseBrokerCsv(text);
     setFileName(name);
+    setTaxSettings({});
     if (result.ok) {
       setParsed(result);
       setError(null);
@@ -56,6 +61,35 @@ export function DepotDoktorApp() {
     setParsed(null);
     setError(null);
     setFileName(null);
+    setTaxSettings({});
+  }
+
+  const updateTaxSettings = useCallback(
+    (positionKey: string, patch: Partial<PositionSettings>) => {
+      const row = taxSummary.rows.find((r) => r.position.key === positionKey);
+      if (!row) return;
+      setTaxSettings((prev) => ({ ...prev, [positionKey]: { ...(prev[positionKey] ?? row.settings), ...patch } }));
+    },
+    [taxSummary],
+  );
+
+  async function exportPdf() {
+    if (!parsed || !report) return;
+    const { renderReportPdf } = await import("@portfolio/pdf");
+    const data = buildReportPdfData(report, taxSummary, {
+      fileName: fileName ?? "export.csv",
+      broker: parsed.broker,
+      transactionCount: parsed.transactions.length,
+      generatedAt: new Date(),
+    });
+    const blob = await renderReportPdf(data);
+    downloadBlob(blob, `depotdoktor-report-${timestampForFilename()}.pdf`);
+  }
+
+  function exportCsv() {
+    if (!parsed) return;
+    const blob = new Blob([transactionsToCsv(parsed.transactions)], { type: "text/csv;charset=utf-8" });
+    downloadBlob(blob, `depotdoktor-transaktionen-${timestampForFilename()}.csv`);
   }
 
   if (!parsed) {
@@ -107,6 +141,8 @@ export function DepotDoktorApp() {
         </details>
       ) : null}
 
+      <ExportBar onExportPdf={exportPdf} onExportCsv={exportCsv} />
+
       <nav className="flex gap-1 border-b border-line" role="tablist">
         {TABS.map((t) => (
           <button
@@ -127,7 +163,7 @@ export function DepotDoktorApp() {
 
       {report && tab === "performance" ? <PerformanceTab report={report} /> : null}
       {report && tab === "allocation" ? <AllocationTab report={report} /> : null}
-      {tab === "tax" ? <TaxTab transactions={parsed.transactions} /> : null}
+      {tab === "tax" ? <TaxTab summary={taxSummary} onYearChange={setTaxYear} onSettingsChange={updateTaxSettings} /> : null}
       {tab === "transactions" ? <TransactionsTab transactions={parsed.transactions} /> : null}
 
       <Disclaimer className="text-xs text-muted" />

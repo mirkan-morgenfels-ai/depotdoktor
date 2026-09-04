@@ -66,7 +66,7 @@ Der Fondstyp (und damit die Teilfreistellungsquote) wird je Position vom Nutzer 
 
 ## Datenschutz
 
-Die CSV-Datei wird ausschließlich im Browser gelesen und verarbeitet. Es findet keine Übertragung an einen Server statt, es gibt keine Anmeldung und keinen Speicher. Der Netzwerk-Tab des Browsers zeigt nach dem Laden der Seite keine weiteren Anfragen. Optional läuft anonyme Seitenstatistik über Vercel Web Analytics; Details stehen in der Datenschutzerklärung der Seite.
+Die CSV-Datei wird ausschließlich im Browser gelesen und verarbeitet. Es findet keine Übertragung an einen Server statt, es gibt keine Anmeldung und keinen Speicher. Der Netzwerk-Tab des Browsers zeigt nach dem Laden der Seite keine weiteren Anfragen; ein automatisierter Test prüft das bei jedem Pull Request. Es läuft keine Seitenstatistik.
 
 ## Tech-Stack
 
@@ -94,7 +94,7 @@ pnpm test:e2e
 
 `pnpm test` führt die Unit-Tests in `packages/csv` und `apps/web` aus. `pnpm test:e2e` startet den Dev-Server und lädt die Testdateien im Browser; ohne installierte Playwright-Browser kann ein vorhandenes Chromium über `PLAYWRIGHT_CHROMIUM_PATH=/pfad/zu/chromium` angegeben werden.
 
-Unit-Tests decken TTWROR, IRR (einschließlich Divergenz-Fallback), Volatilität, Max Drawdown, Vorabpauschale (Normalfall, Wertzuwachs unter Basisertrag, Verlustjahr, unterjähriger Kauf) und FIFO ab, jeweils mit von Hand gerechneten Erwartungswerten. Die E2E-Tests laden die Testdateien beider Broker hoch, prüfen die Kennzahlen in allen Reitern, die Fehlermeldung bei unbekanntem Format und dass während der Auswertung keine Anfrage die Seite verlässt. [Platzhalter: PDF-Export im E2E-Test, sobald Schritt 5 umgesetzt ist]
+Unit-Tests decken TTWROR, IRR (einschließlich Divergenz-Fallback), Volatilität, Max Drawdown, Vorabpauschale (Normalfall, Wertzuwachs unter Basisertrag, Verlustjahr, unterjähriger Kauf), FIFO, den CSV-Export und den PDF-Report (Textextraktion: Steuertabelle und Disclaimer auf jeder Seite) ab, jeweils mit von Hand gerechneten Erwartungswerten. Die E2E-Tests laden die Testdateien beider Broker hoch, prüfen Kennzahlen und Diagramme in allen Reitern, den PDF- und CSV-Download, die Fehlermeldung bei unbekanntem Format und dass während der Auswertung keine Anfrage die Seite verlässt.
 
 Die Steuerlogik wurde gegen den Vorabpauschale-Rechner der Stiftung Warentest und ein Finanztip-Beispiel geprüft. Abweichungen und offene Fragen sind in `docs/verifikation.md` dokumentiert. [Platzhalter: Datum der letzten Prüfung]
 
@@ -111,7 +111,8 @@ apps/web/e2e/                         Playwright-Tests
 packages/csv/                         Parser, Broker-Erkennung, Normalisierung, Fixtures
 packages/ui/                          Basiskomponenten
 packages/legal/                       Disclaimer, Datenschutztexte
-packages/charts/, packages/pdf/       folgen in Schritt 5 (Report, Charts, PDF)
+packages/charts/                      Diagramm-Komponenten (Recharts)
+packages/pdf/                         Report-Vorlage für den PDF-Export (@react-pdf/renderer)
 docs/verifikation.md                  Prüfstand der Steuerlogik, offene Punkte, Abweichungen
 ```
 
@@ -125,7 +126,7 @@ docs/verifikation.md                  Prüfstand der Steuerlogik, offene Punkte,
 
 ## Roadmap
 
-- v1: Trade Republic und Scalable Capital, Kennzahlen, Vorabpauschale, PDF-Export. Stand 03.09.2026: Parser, Kennzahlen, Steuerlogik und Report-Ansicht umgesetzt; Diagramme, PDF-Export und CSV-Export offen.
+- v1: Trade Republic und Scalable Capital, Kennzahlen, Vorabpauschale, PDF-Export. Stand 03.09.2026: Parser, Kennzahlen, Steuerlogik, Report-Ansicht mit Diagrammen, PDF- und CSV-Export umgesetzt; Verifikation an echten Exporten und Veröffentlichung offen.
 - v1.1: DKB, ING, comdirect, PDF-Import für Trade Republic.
 - v2: Optionale Erklärung des Reports in verständlicher Sprache durch ein kleines Sprachmodell (nur aggregierte Kennzahlen werden gesendet, Ergebnis gecacht, Tageslimit).
 - v3: Klumpenrisiko-Analyse über ein Graph Neural Network auf dem Netz der ETF-Überschneidungen und Korrelationen.
