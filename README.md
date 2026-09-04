@@ -2,7 +2,7 @@
 
 Clientseitiger Depot-Steuer- und Performance-Analyzer für deutsche Broker-Exporte. CSV rein, Report raus. Keine Anmeldung, kein Server, keine Datenübertragung.
 
-[![CI](https://github.com/[Platzhalter: owner]/[Platzhalter: repo]/actions/workflows/ci.yml/badge.svg)](https://github.com/[Platzhalter: owner]/[Platzhalter: repo]/actions/workflows/ci.yml)
+[![CI](https://github.com/mirkan-morgenfels-ai/AI-Project-1/actions/workflows/ci.yml/badge.svg)](https://github.com/mirkan-morgenfels-ai/AI-Project-1/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 
 Live-Demo: [Platzhalter: https://<domain>/projects/depotdoktor]
@@ -77,8 +77,8 @@ Next.js 15 (App Router), TypeScript (strict), Tailwind CSS, Papa Parse, Recharts
 Voraussetzungen: Node.js 20 oder neuer, pnpm 9 oder neuer.
 
 ```bash
-git clone https://github.com/[Platzhalter: owner]/[Platzhalter: repo].git
-cd [Platzhalter: repo]
+git clone https://github.com/mirkan-morgenfels-ai/AI-Project-1.git
+cd AI-Project-1
 pnpm install
 pnpm --filter web dev
 ```
