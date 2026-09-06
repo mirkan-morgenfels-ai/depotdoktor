@@ -62,7 +62,7 @@ export function PerformanceTab({ report }: { report: PerformanceReport }) {
           }))}
           formatValue={(v) => formatEur(d(v))}
         />
-        <div className="mt-6 overflow-x-auto">
+        <div className="mt-6 overflow-x-auto" tabIndex={0} role="region" aria-label="Tabelle Wertverlauf">
           <table className="w-full text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-muted">
               <tr>

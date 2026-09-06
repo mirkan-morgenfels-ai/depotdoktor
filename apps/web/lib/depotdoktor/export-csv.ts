@@ -19,9 +19,12 @@ export const NORMALIZED_CSV_COLUMNS = [
   "source_row",
 ] as const;
 
+const FORMULA_START = /^[=+@\t\r]|^-(?![\d.])/;
+
 function escapeCell(value: string | number | null): string {
   if (value === null) return "";
-  const text = String(value);
+  let text = String(value);
+  if (typeof value === "string" && FORMULA_START.test(text)) text = `'${text}`;
   return /[;"\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 

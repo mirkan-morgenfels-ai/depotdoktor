@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type KeyboardEvent } from "react";
 import { parseBrokerCsv, type ParseSuccess } from "@portfolio/csv";
 import { Disclaimer } from "@portfolio/legal";
 import { Button } from "@portfolio/ui";
@@ -18,6 +18,11 @@ import { TransactionsTab } from "./TransactionsTab";
 import { ExportBar } from "./ExportBar";
 
 type TabId = "performance" | "allocation" | "tax" | "transactions";
+
+export const MAX_FILE_BYTES = 25 * 1024 * 1024;
+export const FILE_TOO_LARGE_MESSAGE =
+  "Die Datei ist größer als 25 MB. Broker-Exporte sind normalerweise deutlich kleiner; bitte prüfen Sie, ob es sich um den richtigen Export handelt.";
+export const FILE_READ_ERROR_MESSAGE = "Die Datei konnte nicht gelesen werden. Bitte versuchen Sie es mit einer anderen Kopie des Exports.";
 
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: "performance", label: "Performance" },
@@ -53,8 +58,35 @@ export function DepotDoktorApp() {
   }
 
   async function handleFile(file: File) {
-    const text = await file.text();
-    loadText(text, file.name);
+    if (file.size > MAX_FILE_BYTES) {
+      setParsed(null);
+      setFileName(file.name);
+      setError(FILE_TOO_LARGE_MESSAGE);
+      return;
+    }
+    try {
+      const text = await file.text();
+      loadText(text, file.name);
+    } catch {
+      setParsed(null);
+      setFileName(file.name);
+      setError(FILE_READ_ERROR_MESSAGE);
+    }
+  }
+
+  function handleTabKey(event: KeyboardEvent<HTMLButtonElement>) {
+    const index = TABS.findIndex((t) => t.id === tab);
+    let next = index;
+    if (event.key === "ArrowRight") next = (index + 1) % TABS.length;
+    else if (event.key === "ArrowLeft") next = (index - 1 + TABS.length) % TABS.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = TABS.length - 1;
+    else return;
+    event.preventDefault();
+    const target = TABS[next];
+    if (!target) return;
+    setTab(target.id);
+    document.getElementById(`tab-${target.id}`)?.focus();
   }
 
   function reset() {
@@ -143,13 +175,18 @@ export function DepotDoktorApp() {
 
       <ExportBar onExportPdf={exportPdf} onExportCsv={exportCsv} />
 
-      <nav className="flex gap-1 border-b border-line" role="tablist">
+      <div className="flex flex-wrap gap-1 border-b border-line" role="tablist" aria-label="Auswertungen">
         {TABS.map((t) => (
           <button
             key={t.id}
+            type="button"
+            id={`tab-${t.id}`}
             role="tab"
             aria-selected={tab === t.id}
+            aria-controls={`panel-${t.id}`}
+            tabIndex={tab === t.id ? 0 : -1}
             onClick={() => setTab(t.id)}
+            onKeyDown={handleTabKey}
             className={
               tab === t.id
                 ? "-mb-px border-b-2 border-gold px-4 py-2 text-sm font-medium"
@@ -159,12 +196,14 @@ export function DepotDoktorApp() {
             {t.label}
           </button>
         ))}
-      </nav>
+      </div>
 
-      {report && tab === "performance" ? <PerformanceTab report={report} /> : null}
-      {report && tab === "allocation" ? <AllocationTab report={report} /> : null}
-      {tab === "tax" ? <TaxTab summary={taxSummary} onYearChange={setTaxYear} onSettingsChange={updateTaxSettings} /> : null}
-      {tab === "transactions" ? <TransactionsTab transactions={parsed.transactions} /> : null}
+      <div id={`panel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`}>
+        {report && tab === "performance" ? <PerformanceTab report={report} /> : null}
+        {report && tab === "allocation" ? <AllocationTab report={report} /> : null}
+        {tab === "tax" ? <TaxTab summary={taxSummary} onYearChange={setTaxYear} onSettingsChange={updateTaxSettings} /> : null}
+        {tab === "transactions" ? <TransactionsTab transactions={parsed.transactions} /> : null}
+      </div>
 
       <Disclaimer className="text-xs text-muted" />
     </section>

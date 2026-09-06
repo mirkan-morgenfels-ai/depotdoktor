@@ -20,7 +20,7 @@ Deutsche Broker liefern keine verständliche, exportierbare Aufstellung, die die
 - Zeigt die Allokation nach Assetklasse und Region.
 - Schätzt die Vorabpauschale je Position nach § 18 InvStG mit Teilfreistellung, Zwölftelung bei unterjährigem Kauf und FIFO bei Verkäufen.
 - Exportiert den Report als PDF und die normalisierten Transaktionen als CSV.
-- Verarbeitet alles im Browser. Es gibt keinen Upload, keinen Account und keinen Speicher.
+- Verarbeitet alles im Browser. Es gibt keinen Upload, keinen Account und keinen Speicher. Eine Content-Security-Policy mit `connect-src 'self'` verhindert technisch, dass die Seite Daten an fremde Server sendet.
 
 ## Screenshots
 
@@ -34,7 +34,7 @@ Beide Ansichten zeigen die synthetische Trade-Republic-Testdatei aus `packages/c
 
 ```
 CSV-Datei (Browser)
-  -> Papa Parse (Web Worker)
+  -> Papa Parse
   -> Broker-Erkennung (Header-Signatur)
   -> Normalisierung (Datum, Dezimaltrenner, Vorzeichen, Encoding)
   -> Transaktionsmodell (Buy / Sell / Dividend / Fee / Tax)
@@ -57,9 +57,9 @@ Testdateien für jeden unterstützten Anbieter liegen unter `packages/csv/fixtur
 
 - TTWROR: Verkettung der Periodenrenditen zwischen den Cashflows, sodass Ein- und Auszahlungen die Rendite nicht verzerren.
 - IRR: Nullstelle des Kapitalwerts per Newton-Verfahren, mit Bisektion als Fallback bei mehreren Vorzeichenwechseln.
-- Volatilität: Standardabweichung der Tagesrenditen, annualisiert mit √252.
+- Volatilität: Standardabweichung der Periodenrenditen zwischen den Buchungstagen, auf Tagesbasis normiert und annualisiert mit √252. Ohne Tageskurse unterschätzt sie die tatsächliche Schwankung; die Oberfläche weist darauf hin.
 - Max Drawdown: größter Rückgang vom laufenden Höchststand.
-- Vorabpauschale: Basisertrag = Fondswert am Jahresanfang × Basiszins × 0,7, gedeckelt auf den tatsächlichen Wertzuwachs, abzüglich Ausschüttungen, nie negativ. Basiszins 2026: 3,20 % (BMF-Schreiben vom 13.01.2026), 2025: 2,53 %. Teilfreistellung 30 % (Aktienfonds), 15 % (Mischfonds), 60 % bzw. 80 % (Immobilienfonds). Steuersatz 26,375 % (25 % Kapitalertragsteuer plus Solidaritätszuschlag), Kirchensteuer optional. Sparerpauschbetrag 1.000 € bzw. 2.000 €.
+- Vorabpauschale: Basisertrag = Fondswert am Jahresanfang × Basiszins × 0,7, gedeckelt auf den tatsächlichen Wertzuwachs, abzüglich Ausschüttungen, nie negativ. Basiszins 2026: 3,20 % (BMF-Schreiben vom 13.01.2026), 2025: 2,53 %. Teilfreistellung 30 % (Aktienfonds), 15 % (Mischfonds), 60 % bzw. 80 % (Immobilienfonds). Steuersatz 26,375 % (25 % Kapitalertragsteuer plus Solidaritätszuschlag). Kirchensteuer, Sparerpauschbetrag (1.000 € bzw. 2.000 €) und Verlusttöpfe sind in v1 nicht berücksichtigt; die Oberfläche sagt das.
 - FIFO: Bei Verkäufen gelten die zuerst gekauften Anteile als zuerst verkauft; bereits versteuerte Vorabpauschalen werden auf den Gewinn angerechnet.
 
 Rechenbeispiel: 10.000 € in einem thesaurierenden Aktien-ETF am 1. Januar 2026, Wertzuwachs 1.500 € im Jahr. Basisertrag 224,00 €, nach Teilfreistellung 156,80 € steuerpflichtig, Steuer 41,36 €.
@@ -128,7 +128,7 @@ docs/verifikation.md                  Prüfstand der Steuerlogik, offene Punkte,
 
 ## Roadmap
 
-- v1: Trade Republic und Scalable Capital, Kennzahlen, Vorabpauschale, PDF-Export. Stand 03.09.2026: Parser, Kennzahlen, Steuerlogik, Report-Ansicht mit Diagrammen, PDF- und CSV-Export umgesetzt; Verifikation an echten Exporten und Veröffentlichung offen.
+- v1: Trade Republic und Scalable Capital, Kennzahlen, Vorabpauschale, PDF-Export. Stand 06.09.2026: Parser, Kennzahlen, Steuerlogik, Report-Ansicht mit Diagrammen, PDF- und CSV-Export, Rechtsseiten und Veröffentlichung umgesetzt; Verifikation an echten Exporten offen.
 - v1.1: DKB, ING, comdirect, PDF-Import für Trade Republic.
 - v2: Optionale Erklärung des Reports in verständlicher Sprache durch ein kleines Sprachmodell (nur aggregierte Kennzahlen werden gesendet, Ergebnis gecacht, Tageslimit).
 - v3: Klumpenrisiko-Analyse über ein Graph Neural Network auf dem Netz der ETF-Überschneidungen und Korrelationen.

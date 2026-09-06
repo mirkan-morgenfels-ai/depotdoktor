@@ -42,7 +42,7 @@ export function AllocationTab({ report }: { report: PerformanceReport }) {
       </div>
       <section className="rounded-lg border border-line bg-surface p-6">
         <h2 className="mb-4 font-serif text-xl">Offene Positionen</h2>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tabelle offene Positionen">
           <table className="w-full text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-muted">
               <tr>

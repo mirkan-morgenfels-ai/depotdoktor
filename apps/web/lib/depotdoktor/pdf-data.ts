@@ -7,6 +7,7 @@ import { TAX_METHOD_NOTES } from "./tax/summary";
 import { FUND_TYPE_LABELS } from "./tax/constants";
 import { formatEur, formatNumber, formatPercent } from "./money";
 import { formatDateDe } from "./dates";
+import { timestampForFilename } from "./download";
 
 export const BROKER_LABELS: Record<BrokerId, string> = {
   traderepublic: "Trade Republic",
@@ -151,7 +152,7 @@ export function buildReportPdfData(report: PerformanceReport, tax: TaxSummary, m
   return {
     title: "Depot-Report",
     subtitle: `Performance, Allokation und geschätzte Vorabpauschale ${tax.year}`,
-    generatedAt: `${formatDateDe(meta.generatedAt.toISOString().slice(0, 10))}`,
+    generatedAt: formatDateDe(timestampForFilename(meta.generatedAt)),
     sourceLine: pdfText(`${meta.fileName} · ${BROKER_LABELS[meta.broker]} · ${meta.transactionCount} Buchungen · Zeitraum ${period}`),
     metrics: metrics.map((m) => ({ ...m, label: pdfText(m.label), value: pdfText(m.value), hint: pdfText(m.hint ?? "") })),
     valueTable: sanitizeTable(valueTable),

@@ -115,7 +115,7 @@ export function TaxTab({ summary, onYearChange, onSettingsChange }: TaxTabProps)
           {estimate && estimate.fundType === "none" ? (
             <p className="mt-4 text-sm text-muted">Für diese Position wird keine Vorabpauschale berechnet.</p>
           ) : estimate ? (
-            <div className="mt-4 overflow-x-auto">
+            <div className="mt-4 overflow-x-auto" tabIndex={0} role="region" aria-label={`Vorabpauschale ${position.name}`}>
               <table className="w-full text-sm">
                 <thead className="text-left text-xs uppercase tracking-wide text-muted">
                   <tr>
@@ -137,7 +137,7 @@ export function TaxTab({ summary, onYearChange, onSettingsChange }: TaxTabProps)
                       <td className="py-2 pr-4 text-right tabular-nums">{formatEur(part.result.basisertrag)}</td>
                       <td className="py-2 pr-4 text-right tabular-nums">
                         {formatEur(part.result.vorabpauschale)}
-                        {part.result.capApplied ? <span className="ml-1 text-xs text-gold">Deckel</span> : null}
+                        {part.result.capApplied ? <span className="ml-1 text-xs text-gold-deep">Deckel</span> : null}
                       </td>
                       <td className="py-2 pr-4 text-right tabular-nums">{formatEur(part.result.taxable)}</td>
                       <td className="py-2 text-right tabular-nums">{formatEur(part.result.tax)}</td>

@@ -18,7 +18,7 @@ export function TransactionsTab({ transactions }: { transactions: Transaction[] 
   return (
     <section className="rounded-lg border border-line bg-surface p-6" data-testid="transactions-tab">
       <h2 className="mb-4 font-serif text-xl">Normalisierte Transaktionen</h2>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tabelle Transaktionen">
         <table className="w-full text-sm">
           <thead className="text-left text-xs uppercase tracking-wide text-muted">
             <tr>

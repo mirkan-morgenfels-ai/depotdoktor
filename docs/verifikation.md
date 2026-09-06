@@ -52,3 +52,27 @@ Die Texte unter `/impressum`, `/datenschutz` und `/nutzungsbedingungen` wurden o
 3. Keine Vercel Web Analytics. Der README-Satz „keine weiteren Anfragen“ bleibt damit wahr; der E2E-Test prüft ihn bei jedem Pull Request.
 4. PDF-Report nutzt die eingebauten PDF-Schriften (Helvetica, Times), damit keine Schriftdatei nachgeladen werden muss. Zeichen außerhalb von WinAnsi (Minuszeichen U+2212, Pfeil, schmale Leerzeichen) werden vor dem Rendern ersetzt.
 5. Diagramme verwenden nur Grün als Datenfarbe (eine Serie je Diagramm). Die Projektpalette (Gold, Grün, Bordeaux, Schwarz) besteht den Farbsehschwäche-Test für mehrfarbige Kategorien nicht; sobald ein Diagramm mehrere Serien braucht, sind Beschriftung oder Muster statt Farbe nötig.
+
+## Gesamtprüfung 06.09.2026 (Funktion, Datenschutz, Sicherheit, Layout, Zugänglichkeit)
+
+Geprüft: Typecheck, Lint, 115 Unit-Tests, Build, 5 Playwright-Tests gegen den Prod-Server, `pnpm audit`, axe-core (WCAG 2.1 AA und Best Practices) auf allen Seiten und Reitern in Desktop- und Mobilbreite, Tastaturreihenfolge, Antwort-Header, PDF-Ausgabe.
+
+Behoben:
+
+1. **Sicherheits-Header.** `next.config.ts` setzt jetzt Content-Security-Policy (`connect-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`; `'wasm-unsafe-eval'` für die Yoga-Layout-Engine von @react-pdf), X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, Strict-Transport-Security und Cross-Origin-Opener-Policy. `connect-src 'self'` macht das Datenschutzversprechen technisch durchsetzbar: Der Browser blockiert jede Anfrage an fremde Hosts. Der E2E-Test mit PDF-Download läuft unter dieser Policy.
+2. **Abhängigkeiten.** `pnpm audit` meldete vier Lücken in `postcss` (transitiv über `next`, nur Build-Zeit). Override `postcss >= 8.5.23` in `package.json`; Audit ist leer.
+3. **Layout mobil.** Die Kopfzeile lief bei 390 px Breite über den Rand (horizontales Scrollen auf allen Seiten). Navigation umbricht jetzt; Reiter-Leiste umbricht ebenfalls.
+4. **Kontrast.** Gold `#b8962e` erreicht auf Papier nur 2,7:1. Für Text gibt es jetzt `--color-gold-deep: #7f6619` (5,2:1 auf Papier, 4,6:1 auf Gold-Soft); Gold bleibt für Linien und Flächen. Betroffen: „Projekt K1“, Hinweis „Deckel“, Hover-Farbe der Links.
+5. **Zugänglichkeit.** Reiter nach WAI-ARIA-Muster (`aria-controls`, `tabpanel`, Pfeiltasten, Home/End, Roving Tabindex); horizontal scrollbare Tabellen mit `tabindex="0"` und Beschriftung erreichbar; Sprunglink „Zum Inhalt springen“; sichtbarer Fokusring in Gold-Deep; Datei-Input mit `aria-label`; Navigation als Liste mit `aria-label`. axe-core meldet keine Verstöße mehr.
+6. **Datei-Eingabe.** Dateien über 25 MB werden mit Meldung abgelehnt, Lesefehler werden abgefangen statt unbehandelt zu bleiben.
+7. **CSV-Export.** Textzellen, die mit `=`, `+`, `@`, Tab oder einem Minus ohne Ziffer beginnen, erhalten ein führendes Apostroph (Schutz vor Formelauswertung in Tabellenkalkulationen). Unit-Test ergänzt.
+8. **Favicon** (`apps/web/app/icon.svg`), vorher 404 in der Konsole.
+9. **PDF.** Erstellungsdatum nutzt die lokale Zeit statt UTC.
+10. **README.** „Papa Parse (Web Worker)“ gestrichen (kein Worker im Einsatz), Volatilitätsbeschreibung präzisiert, „Kirchensteuer optional“ und Sparerpauschbetrag als nicht berücksichtigt ausgewiesen, Roadmap-Stand aktualisiert.
+
+Nicht geändert, von Dennis zu entscheiden:
+
+1. **„Quelloffen“ und „auf GitHub“.** Startseite, Impressum, Nutzungsbedingungen, Fußzeile und Datenschutzerklärung (Abschnitt 6) sprechen von quelloffenem Code auf GitHub. Das Repository `mirkan-morgenfels-ai/AI-Project-1` ist derzeit privat (öffentlich 404). Entweder vor der Bewerbungsphase öffentlich stellen und verlinken oder die Formulierungen ändern.
+2. **Steuerjahr-Vorbelegung.** Der Reiter Steuer startet mit 2026, obwohl das Jahr läuft; der Kurs 31.12.2026 existiert noch nicht. Alternative: letztes abgeschlossenes Jahr oder Jahr der letzten Buchung vorbelegen.
+3. **Max Drawdown nach Vollverkauf.** Wird das Depot vollständig verkauft und später neu bespart, startet der TWR-Index bei 1, der alte Höchststand bleibt aber bestehen; der ausgewiesene Drawdown ist dann kein echter Kursrückgang. Randfall, bislang ohne Test.
+4. **Standardwerte im Steuerreiter.** Kurs 01.01. und 31.12. sind mit demselben Wert vorbelegt, damit ist die Vorabpauschale ohne Eingabe immer 0 €. Die Kacheln zeigen 0,00 € statt „Kurse fehlen“. Bewusst so gelassen, weil das Umsetzungsdokument Nutzereingabe vorsieht; eine Kennzeichnung „vorläufig“ wäre möglich.

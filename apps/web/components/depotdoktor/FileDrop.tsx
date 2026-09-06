@@ -43,6 +43,7 @@ export function FileDrop({ onFile }: { onFile: (file: File) => void }) {
         type="file"
         accept=".csv,text/csv"
         className="hidden"
+        aria-label="CSV-Export auswählen"
         data-testid="file-input"
         onChange={(e) => {
           const file = e.target.files?.[0];

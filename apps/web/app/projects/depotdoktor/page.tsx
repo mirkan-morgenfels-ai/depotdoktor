@@ -13,7 +13,7 @@ export default function DepotDoktorPage() {
   return (
     <div className="space-y-8">
       <section className="max-w-3xl">
-        <p className="text-xs uppercase tracking-widest text-gold">Projekt K1</p>
+        <p className="text-xs uppercase tracking-widest text-gold-deep">Projekt K1</p>
         <h1 className="mt-2 font-serif text-4xl">DepotDoktor</h1>
         <p className="mt-4 text-lg">
           CSV rein, Report raus. Zeitgewichtete Rendite, interner Zinsfuß, Allokation und die geschätzte Vorabpauschale
@@ -26,11 +26,11 @@ export default function DepotDoktorPage() {
         <Disclaimer variant="long" />
         <p className="mt-2">
           Mit der Nutzung erkennen Sie die{" "}
-          <Link href="/nutzungsbedingungen" className="underline hover:text-gold">
+          <Link href="/nutzungsbedingungen" className="underline hover:text-gold-deep">
             Nutzungsbedingungen
           </Link>{" "}
           an. Einzelheiten zur Verarbeitung Ihrer Daten stehen in der{" "}
-          <Link href="/datenschutz" className="underline hover:text-gold">
+          <Link href="/datenschutz" className="underline hover:text-gold-deep">
             Datenschutzerklärung
           </Link>
           .

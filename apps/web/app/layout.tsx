@@ -7,43 +7,49 @@ export const metadata: Metadata = {
   description: "Projekte: DepotDoktor, KontoKlar, NetzRadar",
 };
 
+const NAV_LINKS = [
+  { href: "/projects/depotdoktor", label: "DepotDoktor" },
+  { href: "/impressum", label: "Impressum" },
+  { href: "/datenschutz", label: "Datenschutz" },
+  { href: "/nutzungsbedingungen", label: "Nutzungsbedingungen" },
+] as const;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="de">
       <body className="min-h-screen bg-paper text-ink antialiased">
+        <a href="#main" className="skip-link">
+          Zum Inhalt springen
+        </a>
         <header className="border-b border-line bg-surface">
-          <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-            <Link href="/" className="font-serif text-lg">
+          <nav
+            aria-label="Hauptnavigation"
+            className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-6 py-4"
+          >
+            <Link href="/" className="font-serif text-lg whitespace-nowrap">
               Mirkan Deniz Günkaya
             </Link>
-            <div className="flex gap-6 text-sm">
-              <Link href="/projects/depotdoktor" className="hover:text-gold">
-                DepotDoktor
-              </Link>
-              <Link href="/impressum" className="hover:text-gold">
-                Impressum
-              </Link>
-              <Link href="/datenschutz" className="hover:text-gold">
-                Datenschutz
-              </Link>
-              <Link href="/nutzungsbedingungen" className="hover:text-gold">
-                Nutzungsbedingungen
-              </Link>
-            </div>
+            <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
+              {NAV_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className="hover:text-gold-deep">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </nav>
         </header>
-        <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
+        <main id="main" className="mx-auto max-w-6xl px-6 py-10">
+          {children}
+        </main>
         <footer className="mx-auto flex max-w-6xl flex-wrap gap-x-4 gap-y-1 px-6 py-8 text-xs text-muted">
           <span>© 2026 Mirkan Deniz Günkaya · Privates, nicht-kommerzielles Projekt · Quellcode unter MIT-Lizenz</span>
-          <Link href="/impressum" className="hover:text-gold">
-            Impressum
-          </Link>
-          <Link href="/datenschutz" className="hover:text-gold">
-            Datenschutz
-          </Link>
-          <Link href="/nutzungsbedingungen" className="hover:text-gold">
-            Nutzungsbedingungen
-          </Link>
+          {NAV_LINKS.slice(1).map((link) => (
+            <Link key={link.href} href={link.href} className="hover:text-gold-deep">
+              {link.label}
+            </Link>
+          ))}
         </footer>
       </body>
     </html>

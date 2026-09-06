@@ -31,6 +31,15 @@ describe("CSV-Export der normalisierten Transaktionen", () => {
     expect(lines[2]).toBe("2026-01-06;2026-01-06T08:00:00;scalable;buy;IE00TEST0001;Testfonds Welt UCITS ETF;;unknown;100;80;-8000.99;0.99;0;EUR;Buy;3");
   });
 
+  test("Zellen, die wie Tabellenkalkulationsformeln beginnen, werden entschärft", () => {
+    const tx = { ...transactions[1]!, name: "=HYPERLINK(https://example.org)", symbol: "+ABC", rawType: "-Buy" };
+    const cells = transactionsToCsv([tx]).split("\r\n")[1]!.split(";");
+    expect(cells[5]).toBe("'=HYPERLINK(https://example.org)");
+    expect(cells[6]).toBe("'+ABC");
+    expect(cells[14]).toBe("'-Buy");
+    expect(cells[10]).toBe("-8000.99");
+  });
+
   test("Semikolon und Anführungszeichen im Namen werden maskiert", () => {
     const tx = { ...transactions[1]!, name: 'Fonds "A"; Klasse B' };
     const out = transactionsToCsv([tx]).split("\r\n")[1]!;
