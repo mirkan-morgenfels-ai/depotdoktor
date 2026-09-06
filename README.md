@@ -20,7 +20,7 @@ Deutsche Broker liefern keine verständliche, exportierbare Aufstellung, die die
 - Zeigt die Allokation nach Assetklasse und Region.
 - Schätzt die Vorabpauschale je Position nach § 18 InvStG mit Teilfreistellung, Zwölftelung bei unterjährigem Kauf und FIFO bei Verkäufen.
 - Exportiert den Report als PDF und die normalisierten Transaktionen als CSV.
-- Verarbeitet alles im Browser. Es gibt keinen Upload, keinen Account und keinen Speicher. Eine Content-Security-Policy mit `connect-src 'self'` verhindert technisch, dass die Seite Daten an fremde Server sendet.
+- Verarbeitet alles im Browser. Es gibt keinen Upload, keinen Account und keinen Speicher. Eine Content-Security-Policy mit `connect-src 'self' data:` verhindert technisch, dass die Seite Daten an fremde Server sendet.
 
 ## Screenshots
 
