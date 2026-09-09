@@ -1,5 +1,6 @@
 import Papa from "papaparse";
 import { detectBroker, firstLine, splitHeaderLine, stripBom, BROKER_PARSERS } from "./detect";
+import { EMPTY_FILE_MESSAGE, PDF_FILE_MESSAGE } from "./filekind";
 import type { ParseResult, ParseWarning, Transaction } from "./types";
 
 export type {
@@ -19,15 +20,24 @@ export { detectBroker, BROKER_PARSERS } from "./detect";
 export { parseDecimal, parseDate, normalizeIsin, normalizeDecimalString } from "./normalize";
 export { tradeRepublicParser, TRADE_REPUBLIC_REQUIRED_COLUMNS } from "./parsers/traderepublic";
 export { scalableParser, SCALABLE_REQUIRED_COLUMNS } from "./parsers/scalable";
+export {
+  detectFileKind,
+  decodeCsvBytes,
+  FILE_KIND_MESSAGES,
+  PDF_FILE_MESSAGE,
+  ZIP_FILE_MESSAGE,
+  BINARY_FILE_MESSAGE,
+  EMPTY_FILE_MESSAGE,
+} from "./filekind";
+export type { FileKind } from "./filekind";
 
 export const UNKNOWN_FORMAT_MESSAGE =
   "Das CSV-Format wurde nicht erkannt. Unterstützt werden der Transaktionsexport von Trade Republic und die Transaktionen-CSV von Scalable Capital. Bitte prüfen Sie, ob die erste Zeile der Datei die Spaltenüberschriften enthält.";
 
-export const EMPTY_FILE_MESSAGE = "Die Datei ist leer.";
-
 export function parseBrokerCsv(input: string): ParseResult {
   const text = stripBom(input);
   if (text.trim() === "") return { ok: false, error: EMPTY_FILE_MESSAGE };
+  if (text.startsWith("%PDF-")) return { ok: false, error: PDF_FILE_MESSAGE };
 
   const detected = detectBroker(text);
   if (!detected) {

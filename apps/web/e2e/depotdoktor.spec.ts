@@ -83,6 +83,32 @@ test("Unbekanntes Format bricht mit Meldung ab", async ({ page }) => {
   await expect(page.getByTestId("report-section")).toHaveCount(0);
 });
 
+test("PDF-Kontoauszug wird mit klarer Meldung abgelehnt", async ({ page }) => {
+  await page.goto("/projects/depotdoktor");
+  await page.getByTestId("file-input").setInputFiles({
+    name: "Kontoauszug-Juli.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.7\n%\xe2\xe3\xcf\xd3\n1 0 obj\n<< /Type /Catalog >>\nendobj\n", "latin1"),
+  });
+  const error = page.getByTestId("parse-error");
+  await expect(error).toContainText("Kontoauszug-Juli.pdf");
+  await expect(error).toContainText("PDF-Datei");
+  await expect(error).toContainText("Transaktionsexport");
+  await expect(error).not.toContainText("Gefundene Spalten");
+  await expect(page.getByTestId("report-section")).toHaveCount(0);
+});
+
+test("Excel-Datei wird mit klarer Meldung abgelehnt", async ({ page }) => {
+  await page.goto("/projects/depotdoktor");
+  await page.getByTestId("file-input").setInputFiles({
+    name: "Depot.xlsx",
+    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    buffer: Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x06, 0x00]),
+  });
+  await expect(page.getByTestId("parse-error")).toContainText("Excel");
+  await expect(page.getByTestId("report-section")).toHaveCount(0);
+});
+
 test("Rechtsseiten sind erreichbar und verlinkt", async ({ page }) => {
   await page.goto("/projects/depotdoktor");
   await page.getByRole("link", { name: "Nutzungsbedingungen" }).first().click();

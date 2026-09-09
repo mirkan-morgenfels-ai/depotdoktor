@@ -96,7 +96,7 @@ pnpm test:e2e
 
 `pnpm test` führt die Unit-Tests in `packages/csv` und `apps/web` aus. `pnpm test:e2e` startet den Dev-Server und lädt die Testdateien im Browser; ohne installierte Playwright-Browser kann ein vorhandenes Chromium über `PLAYWRIGHT_CHROMIUM_PATH=/pfad/zu/chromium` angegeben werden.
 
-Unit-Tests decken TTWROR, IRR (einschließlich Divergenz-Fallback), Volatilität, Max Drawdown, Vorabpauschale (Normalfall, Wertzuwachs unter Basisertrag, Verlustjahr, unterjähriger Kauf), FIFO, den CSV-Export und den PDF-Report (Textextraktion: Steuertabelle und Disclaimer auf jeder Seite) ab, jeweils mit von Hand gerechneten Erwartungswerten. Die E2E-Tests laden die Testdateien beider Broker hoch, prüfen Kennzahlen und Diagramme in allen Reitern, den PDF- und CSV-Download, die Fehlermeldung bei unbekanntem Format und dass während der Auswertung keine Anfrage die Seite verlässt.
+Unit-Tests decken TTWROR, IRR (einschließlich Divergenz-Fallback), Volatilität, Max Drawdown, Vorabpauschale (Normalfall, Wertzuwachs unter Basisertrag, Verlustjahr, unterjähriger Kauf), FIFO, den CSV-Export und den PDF-Report (Textextraktion: Steuertabelle und Disclaimer auf jeder Seite) ab, jeweils mit von Hand gerechneten Erwartungswerten. Die E2E-Tests laden die Testdateien beider Broker hoch, prüfen Kennzahlen und Diagramme in allen Reitern, den PDF- und CSV-Download, die Fehlermeldung bei unbekanntem Format, die Ablehnung von PDF- und Excel-Dateien und dass während der Auswertung keine Anfrage die Seite verlässt.
 
 Die Steuerlogik ist gegen die durchgerechneten Fälle A bis E des Umsetzungsdokuments getestet. Die Prüfung gegen den Vorabpauschale-Rechner der Stiftung Warentest und ein Finanztip-Beispiel steht noch aus; offene Punkte und Abweichungen sind in `docs/verifikation.md` dokumentiert.
 
@@ -124,6 +124,7 @@ docs/verifikation.md                  Prüfstand der Steuerlogik, offene Punkte,
 - Der Fondstyp wird manuell gewählt; eine falsche Wahl ergibt eine falsche Teilfreistellung.
 - Steuerergebnisse sind Schätzungen. Maßgeblich ist die Abrechnung der depotführenden Bank, die zusätzlich Freistellungsaufträge, Verlusttöpfe und Kirchensteuer berücksichtigt.
 - Ändert ein Broker sein Exportformat, bricht der Parser mit einer Fehlermeldung ab, statt falsche Zahlen zu liefern.
+- Nur CSV-Dateien werden gelesen. PDF-Kontoauszüge, Excel- und ZIP-Dateien werden an der Dateisignatur erkannt und mit einem Hinweis auf den richtigen Export abgelehnt.
 - Nur die oben genannten Exporte sind verifiziert.
 
 ## Roadmap

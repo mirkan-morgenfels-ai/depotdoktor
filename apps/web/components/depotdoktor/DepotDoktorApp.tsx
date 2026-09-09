@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState, type KeyboardEvent } from "react";
-import { parseBrokerCsv, type ParseSuccess } from "@portfolio/csv";
+import { decodeCsvBytes, detectFileKind, parseBrokerCsv, FILE_KIND_MESSAGES, type ParseSuccess } from "@portfolio/csv";
 import { Disclaimer } from "@portfolio/legal";
 import { Button } from "@portfolio/ui";
 import { buildReport } from "@/lib/depotdoktor/report";
@@ -65,8 +65,15 @@ export function DepotDoktorApp() {
       return;
     }
     try {
-      const text = await file.text();
-      loadText(text, file.name);
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const kind = detectFileKind(bytes);
+      if (kind !== "text") {
+        setParsed(null);
+        setFileName(file.name);
+        setError(FILE_KIND_MESSAGES[kind]);
+        return;
+      }
+      loadText(decodeCsvBytes(bytes), file.name);
     } catch {
       setParsed(null);
       setFileName(file.name);

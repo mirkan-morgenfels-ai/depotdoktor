@@ -53,6 +53,20 @@ Die Texte unter `/impressum`, `/datenschutz` und `/nutzungsbedingungen` wurden o
 4. PDF-Report nutzt die eingebauten PDF-Schriften (Helvetica, Times), damit keine Schriftdatei nachgeladen werden muss. Zeichen außerhalb von WinAnsi (Minuszeichen U+2212, Pfeil, schmale Leerzeichen) werden vor dem Rendern ersetzt.
 5. Diagramme verwenden nur Grün als Datenfarbe (eine Serie je Diagramm). Die Projektpalette (Gold, Grün, Bordeaux, Schwarz) besteht den Farbsehschwäche-Test für mehrfarbige Kategorien nicht; sobald ein Diagramm mehrere Serien braucht, sind Beschriftung oder Muster statt Farbe nötig.
 
+## Dateityp-Prüfung 09.09.2026
+
+Anlass: Beim Test von KontoKlar (K2) zog Dennis einen PDF-Kontoauszug in das CSV-Feld; die Anwendung las die Binärdatei als Text und zeigte Bytemüll als „erkannte Kopfzeile“. DepotDoktor hatte dieselbe Lücke: `file.text()` dekodierte jede Datei als UTF-8, die Kopfzeilenerkennung schlug fehl, und die Meldung „Format nicht erkannt“ zitierte die ersten Bytes der PDF als „gefundene Spalten“.
+
+Umgesetzt:
+
+1. `packages/csv/src/filekind.ts`: `detectFileKind` prüft die Bytes vor jeder Textverarbeitung. `%PDF-` ergibt `pdf`, `PK` (ZIP, damit auch xlsx/docx) ergibt `zip`, Nullbytes oder mehr als 5 % Steuerzeichen in den ersten 4 KB ergeben `binary`, 0 Byte ergibt `empty`. Nur `text` gelangt zum Parser. Zu jeder Nicht-Text-Art gibt es eine deutsche Meldung mit dem Exportweg beider Broker.
+2. `decodeCsvBytes` dekodiert UTF-8 strikt und fällt bei ungültigen Sequenzen auf Windows-1252 zurück; vorher wurden Umlaute aus Latin-Exporten als U+FFFD gelesen.
+3. `parseBrokerCsv` bricht zusätzlich bei Text ab, der mit `%PDF-` beginnt (zweite Sicherung für Aufrufer, die einen String übergeben).
+4. Drop-Zone nennt ausdrücklich: nur CSV, keine PDF-Kontoauszüge, keine Excel-Dateien.
+5. Tests: 12 Unit-Tests (`filekind.test.ts`) mit Signaturen, Steuerzeichen-Anteil, BOM, Windows-1252 und PDF-Text im Parser; 2 Playwright-Tests laden eine PDF- und eine xlsx-Datei hoch und erwarten die Meldung ohne Report und ohne „Gefundene Spalten“.
+
+Nicht abgedeckt: UTF-16-Exporte (enthalten Nullbytes und würden als Binärdatei abgelehnt). Kein bekannter Broker liefert UTF-16; falls doch, Dekodierung per BOM `FF FE` ergänzen.
+
 ## Gesamtprüfung 06.09.2026 (Funktion, Datenschutz, Sicherheit, Layout, Zugänglichkeit)
 
 Geprüft: Typecheck, Lint, 115 Unit-Tests, Build, 5 Playwright-Tests gegen den Prod-Server, `pnpm audit`, axe-core (WCAG 2.1 AA und Best Practices) auf allen Seiten und Reitern in Desktop- und Mobilbreite, Tastaturreihenfolge, Antwort-Header, PDF-Ausgabe.
