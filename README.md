@@ -58,9 +58,9 @@ Testdateien für jeden unterstützten Anbieter liegen unter `packages/csv/fixtur
 - TTWROR: Verkettung der Periodenrenditen zwischen den Cashflows, sodass Ein- und Auszahlungen die Rendite nicht verzerren.
 - IRR: Nullstelle des Kapitalwerts per Newton-Verfahren, mit Bisektion als Fallback bei mehreren Vorzeichenwechseln.
 - Volatilität: Standardabweichung der Periodenrenditen zwischen den Buchungstagen, auf Tagesbasis normiert und annualisiert mit √252. Ohne Tageskurse unterschätzt sie die tatsächliche Schwankung; die Oberfläche weist darauf hin.
-- Max Drawdown: größter Rückgang vom laufenden Höchststand.
+- Max Drawdown: größter Rückgang vom laufenden Höchststand des zeitgewichteten Index. Nach einem Vollverkauf läuft der Index weiter; Zeiten ohne Bestand zählen mit 0 %, sodass ein Neukauf keinen künstlichen Rückgang erzeugt.
 - Vorabpauschale: Basisertrag = Fondswert am Jahresanfang × Basiszins × 0,7, gedeckelt auf den tatsächlichen Wertzuwachs, abzüglich Ausschüttungen, nie negativ. Basiszins 2026: 3,20 % (BMF-Schreiben vom 13.01.2026), 2025: 2,53 %. Teilfreistellung 30 % (Aktienfonds), 15 % (Mischfonds), 60 % bzw. 80 % (Immobilienfonds). Steuersatz 26,375 % (25 % Kapitalertragsteuer plus Solidaritätszuschlag). Kirchensteuer, Sparerpauschbetrag (1.000 € bzw. 2.000 €) und Verlusttöpfe sind in v1 nicht berücksichtigt; die Oberfläche sagt das.
-- FIFO: Bei Verkäufen gelten die zuerst gekauften Anteile als zuerst verkauft; bereits versteuerte Vorabpauschalen werden auf den Gewinn angerechnet.
+- FIFO: Bei Verkäufen gelten die zuerst gekauften Anteile als zuerst verkauft. Werden Fondsanteile aus einem Vorjahr verkauft, kann im Steuerreiter der Betrag der bereits angesetzten Vorabpauschalen eingetragen werden; er mindert den Veräußerungsgewinn in voller Höhe (§ 19 Abs. 1 Satz 3 und 4 InvStG). Ohne Eingabe wird nichts abgezogen.
 
 Rechenbeispiel: 10.000 € in einem thesaurierenden Aktien-ETF am 1. Januar 2026, Wertzuwachs 1.500 € im Jahr. Basisertrag 224,00 €, nach Teilfreistellung 156,80 € steuerpflichtig, Steuer 41,36 €.
 
@@ -94,9 +94,11 @@ pnpm test
 pnpm test:e2e
 ```
 
-`pnpm test` führt die Unit-Tests in `packages/csv` und `apps/web` aus. `pnpm test:e2e` startet den Dev-Server und lädt die Testdateien im Browser; ohne installierte Playwright-Browser kann ein vorhandenes Chromium über `PLAYWRIGHT_CHROMIUM_PATH=/pfad/zu/chromium` angegeben werden.
+`pnpm test` führt die Unit-Tests in `packages/csv`, `packages/pdf` und `apps/web` aus. `pnpm test:e2e` startet den Dev-Server (mit `CI=true` und `E2E_SERVER=start` nach `pnpm build` den Produktionsserver, wie in der CI) und lädt die Testdateien im Browser; ohne installierte Playwright-Browser kann ein vorhandenes Chromium über `PLAYWRIGHT_CHROMIUM_PATH=/pfad/zu/chromium` angegeben werden.
 
-Unit-Tests decken TTWROR, IRR (einschließlich Divergenz-Fallback), Volatilität, Max Drawdown, Vorabpauschale (Normalfall, Wertzuwachs unter Basisertrag, Verlustjahr, unterjähriger Kauf), FIFO, den CSV-Export und den PDF-Report (Textextraktion: Steuertabelle und Disclaimer auf jeder Seite) ab, jeweils mit von Hand gerechneten Erwartungswerten. Die E2E-Tests laden die Testdateien beider Broker hoch, prüfen Kennzahlen und Diagramme in allen Reitern, den PDF- und CSV-Download, die Fehlermeldung bei unbekanntem Format, die Ablehnung von PDF- und Excel-Dateien und dass während der Auswertung keine Anfrage die Seite verlässt.
+Stand 06.10.2026: 155 Unit-Tests und 10 Playwright-Tests, alle grün; dazu ein bewusst offener Test (`todo`) für Fall D, siehe `docs/verifikation.md`.
+
+Unit-Tests decken TTWROR, IRR (einschließlich Divergenz-Fallback), Volatilität, Max Drawdown (auch nach Vollverkauf), Vorabpauschale (Normalfall, Wertzuwachs unter Basisertrag, Verlustjahr, unterjähriger Kauf), FIFO mit angesetzten Vorabpauschalen, die Dateityp-Erkennung (PDF, ZIP, Binärdaten, Windows-1252, UTF-16 mit BOM), den CSV-Export und den PDF-Report (Textextraktion: Steuertabelle und Disclaimer auf jeder Seite) ab, jeweils mit von Hand gerechneten Erwartungswerten. Die E2E-Tests laden die Testdateien beider Broker hoch, auch als UTF-16-Datei, prüfen Kennzahlen und Diagramme in allen Reitern, die Eingabe angesetzter Vorabpauschalen beim Verkauf, den PDF- und CSV-Download, die Fehlermeldung bei unbekanntem Format, die Ablehnung von PDF- und Excel-Dateien, die Links der Startseite, die Aussagen zum Quellcode auf Startseite und Rechtsseiten und dass während der Auswertung keine Anfrage die Seite verlässt.
 
 Die Steuerlogik ist gegen die durchgerechneten Fälle A bis E des Umsetzungsdokuments getestet. Die Prüfung gegen den Vorabpauschale-Rechner der Stiftung Warentest und ein Finanztip-Beispiel steht noch aus; offene Punkte und Abweichungen sind in `docs/verifikation.md` dokumentiert.
 
@@ -124,12 +126,12 @@ docs/verifikation.md                  Prüfstand der Steuerlogik, offene Punkte,
 - Der Fondstyp wird manuell gewählt; eine falsche Wahl ergibt eine falsche Teilfreistellung.
 - Steuerergebnisse sind Schätzungen. Maßgeblich ist die Abrechnung der depotführenden Bank, die zusätzlich Freistellungsaufträge, Verlusttöpfe und Kirchensteuer berücksichtigt.
 - Ändert ein Broker sein Exportformat, bricht der Parser mit einer Fehlermeldung ab, statt falsche Zahlen zu liefern.
-- Nur CSV-Dateien werden gelesen. PDF-Kontoauszüge, Excel- und ZIP-Dateien werden an der Dateisignatur erkannt und mit einem Hinweis auf den richtigen Export abgelehnt.
+- Nur CSV-Dateien werden gelesen, als UTF-8, Windows-1252 oder UTF-16 mit BOM. PDF-Kontoauszüge, Excel- und ZIP-Dateien werden an der Dateisignatur erkannt und mit einem Hinweis auf den richtigen Export abgelehnt.
 - Nur die oben genannten Exporte sind verifiziert.
 
 ## Roadmap
 
-- v1: Trade Republic und Scalable Capital, Kennzahlen, Vorabpauschale, PDF-Export. Stand 06.09.2026: Parser, Kennzahlen, Steuerlogik, Report-Ansicht mit Diagrammen, PDF- und CSV-Export, Rechtsseiten und Veröffentlichung umgesetzt; Verifikation an echten Exporten offen.
+- v1: Trade Republic und Scalable Capital, Kennzahlen, Vorabpauschale, PDF-Export. Stand 06.10.2026: Parser, Kennzahlen, Steuerlogik, Report-Ansicht mit Diagrammen, PDF- und CSV-Export, Rechtsseiten und Veröffentlichung umgesetzt; dazu Dateityp-Prüfung, UTF-16-Import, Eingabe angesetzter Vorabpauschalen beim Verkauf und Max Drawdown nach Vollverkauf. Offen: Verifikation an echten Exporten und gegen den Vorabpauschale-Rechner der Stiftung Warentest.
 - v1.1: DKB, ING, comdirect, PDF-Import für Trade Republic.
 - v2: Optionale Erklärung des Reports in verständlicher Sprache durch ein kleines Sprachmodell (nur aggregierte Kennzahlen werden gesendet, Ergebnis gecacht, Tageslimit).
 - v3: Klumpenrisiko-Analyse über ein Graph Neural Network auf dem Netz der ETF-Überschneidungen und Korrelationen.
@@ -141,8 +143,8 @@ DepotDoktor liefert allgemeine Informationen und stellt keine Anlage- oder Steue
 ## Quellen
 
 - BMF-Schreiben vom 13.01.2026 zum Basiszins 2026 (3,20 %), Az. IV C 1 - S 1980/00230/012/001
-- BMF-Schreiben vom 10.01.2025 zum Basiszins 2025 (2,53 %)
-- § 18 InvStG (Vorabpauschale), § 20 InvStG (Teilfreistellung)
+- BMF-Schreiben vom 10.01.2025 zum Basiszins 2025 (2,53 %), Az. IV C 1 - S 1980/00230/009/002, BStBl I 2025, 273
+- § 18 InvStG (Vorabpauschale), § 19 InvStG (Veräußerungsgewinn, Minderung um angesetzte Vorabpauschalen), § 20 InvStG (Teilfreistellung), § 20 Abs. 9 EStG (Sparer-Pauschbetrag)
 - BaFin-Merkblatt „Hinweise zum Tatbestand der Anlageberatung", 10.02.2025
 - Portfolio-Performance-Forum: Trade-Republic-Transaktionsexport und Scalable-Capital-CSV
 - Vorabpauschale-Rechner der Stiftung Warentest

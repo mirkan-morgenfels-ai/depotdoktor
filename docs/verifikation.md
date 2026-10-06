@@ -1,6 +1,6 @@
 # Verifikation und offene Punkte (K1 DepotDoktor)
 
-Stand: 03.09.2026. Quellen zur Steuerlogik gehören hierher, nicht in den Code.
+Stand: 06.10.2026 (Lückenschluss, siehe letzter Abschnitt). Quellen zur Steuerlogik gehören hierher, nicht in den Code.
 
 ## Prüfstand der Steuerlogik
 
@@ -12,14 +12,14 @@ Stand: 03.09.2026. Quellen zur Steuerlogik gehören hierher, nicht in den Code.
 | D Kauf am 1. Juli, Bezugswert 10.000 € | Basisertrag 112,00 €, Steuer 20,68 € | `vorabpauschale.test.ts` | offen, siehe unten |
 | E FIFO 10 @ 80, 10 @ 100, Verkauf 12 @ 120 | Veräußerungsgewinn 440 € | `fifo.test.ts` | offen |
 
-Rechtsgrundlagen laut Umsetzungsdokument: § 18 InvStG (Vorabpauschale), § 20 InvStG (Teilfreistellung), BMF-Schreiben vom 13.01.2026 (Basiszins 2026: 3,20 %, Az. IV C 1 - S 1980/00230/012/001), BMF-Schreiben vom 10.01.2025 (Basiszins 2025: 2,53 %).
+Rechtsgrundlagen laut Umsetzungsdokument: § 18 InvStG (Vorabpauschale), § 20 InvStG (Teilfreistellung), BMF-Schreiben vom 13.01.2026 (Basiszins 2026: 3,20 %, Az. IV C 1 - S 1980/00230/012/001), BMF-Schreiben vom 10.01.2025 (Basiszins 2025: 2,53 %, Az. IV C 1 - S 1980/00230/009/002, BStBl I 2025, 273). Die Konstanten in `tax/constants.ts` wurden am 06.10.2026 gegen diese Schreiben und den Gesetzestext geprüft und stimmen (Abschnitt „Lückenschluss 06.10.2026“).
 
 ## Zu verifizieren
 
 1. **Zwölftelung bei unterjährigem Kauf (Fall D).** Das Umsetzungsdokument kürzt den Basisertrag um 1/12 je vollen Monat vor dem Kaufmonat. § 18 Abs. 2 InvStG spricht davon, dass sich die *Vorabpauschale* vermindert. Beide Varianten liefern dasselbe Ergebnis, solange der Wertzuwachs-Deckel nicht greift; greift er, weichen sie ab (Beispiel im Test: 112,00 € gegenüber 75,00 €). Implementiert ist die Dokument-Variante als Standard (`reductionTarget: "basisertrag"`), die Gesetzes-Variante ist per Parameter wählbar. Prüfen gegen: BMF-Anwendungsschreiben zum InvStG, Vorabpauschale-Rechner der Stiftung Warentest, Finanztip-Beispiel mit unterjährigem Kauf und geringem Zuwachs.
 2. **Bezugsgröße bei unterjährigem Kauf.** Implementiert: Stück × Rücknahmepreis am Jahresanfang (auch für später gekaufte Anteile), Wertzuwachs = Stück × (Kurs 31.12. − Kurs 01.01.). Alternative: Anschaffungspreis als Bezugswert. Prüfen gegen dieselben Quellen wie Punkt 1.
 3. **Basiszins vor 2025.** Nur 2025 und 2026 sind hinterlegt. Weitere Jahre erst nach Nachweis über das jeweilige BMF-Schreiben ergänzen (`apps/web/lib/depotdoktor/tax/constants.ts`).
-4. **Anrechnung versteuerter Vorabpauschalen beim Verkauf.** Die FIFO-Logik führt je Tranche einen Betrag „versteuerte Vorabpauschale je Anteil“ und zieht ihn vom Veräußerungsgewinn ab. Ohne Kursdaten der Vorjahre ist dieser Betrag heute 0; eine Eingabemöglichkeit fehlt noch.
+4. ~~**Anrechnung versteuerter Vorabpauschalen beim Verkauf.** Eingabemöglichkeit fehlt.~~ Erledigt am 06.10.2026: Eingabe je Verkauf im Steuerreiter, Einzelheiten im Abschnitt „Lückenschluss 06.10.2026“. Weiter zu verifizieren: ob die Minderung nach § 19 Abs. 1 Satz 3 InvStG einen Veräußerungsverlust ergeben darf (implementiert: rein rechnerische Minderung, der Gewinn kann negativ werden) und wie Banken den Betrag in der Verkaufsabrechnung ausweisen. Prüfen gegen: BMF-Anwendungsschreiben zum InvStG (Randziffern zu § 19), eine echte Verkaufsabrechnung mit angesetzten Vorabpauschalen.
 5. **Sparerpauschbetrag, Kirchensteuer, Verlusttöpfe** sind nicht berücksichtigt; die Oberfläche sagt das.
 
 ## Zu verifizieren an echten Exporten
@@ -65,7 +65,7 @@ Umgesetzt:
 4. Drop-Zone nennt ausdrücklich: nur CSV, keine PDF-Kontoauszüge, keine Excel-Dateien.
 5. Tests: 12 Unit-Tests (`filekind.test.ts`) mit Signaturen, Steuerzeichen-Anteil, BOM, Windows-1252 und PDF-Text im Parser; 2 Playwright-Tests laden eine PDF- und eine xlsx-Datei hoch und erwarten die Meldung ohne Report und ohne „Gefundene Spalten“.
 
-Nicht abgedeckt: UTF-16-Exporte (enthalten Nullbytes und würden als Binärdatei abgelehnt). Kein bekannter Broker liefert UTF-16; falls doch, Dekodierung per BOM `FF FE` ergänzen.
+~~Nicht abgedeckt: UTF-16-Exporte.~~ Seit 06.10.2026 werden UTF-16-Dateien mit BOM (`FF FE` little endian, `FE FF` big endian) erkannt und dekodiert; UTF-16 ohne BOM wird weiterhin als Binärdatei abgelehnt (siehe Abschnitt „Lückenschluss 06.10.2026“).
 
 ## Gesamtprüfung 06.09.2026 (Funktion, Datenschutz, Sicherheit, Layout, Zugänglichkeit)
 
@@ -86,7 +86,168 @@ Behoben:
 
 Nicht geändert, von Dennis zu entscheiden:
 
-1. **„Quelloffen“ und „auf GitHub“.** Startseite, Impressum, Nutzungsbedingungen, Fußzeile und Datenschutzerklärung (Abschnitt 6) sprechen von quelloffenem Code auf GitHub. Das Repository `mirkan-morgenfels-ai/AI-Project-1` ist derzeit privat (öffentlich 404). Entweder vor der Bewerbungsphase öffentlich stellen und verlinken oder die Formulierungen ändern.
+1. ~~**„Quelloffen“ und „auf GitHub“.**~~ Erledigt am 06.10.2026: Startseite, Impressum, Datenschutzerklärung und Nutzungsbedingungen sagen nur noch, dass der Quellcode unter der MIT-Lizenz steht, ohne Behauptung öffentlicher Einsehbarkeit („zur Verfügung“, „quelloffen“, „auf GitHub“) und ohne Repo-Link. Ob das Repository `mirkan-morgenfels-ai/AI-Project-1` öffentlich gestellt wird, entscheidet weiterhin Dennis; danach könnte ein Link ergänzt werden.
 2. **Steuerjahr-Vorbelegung.** Der Reiter Steuer startet mit 2026, obwohl das Jahr läuft; der Kurs 31.12.2026 existiert noch nicht. Alternative: letztes abgeschlossenes Jahr oder Jahr der letzten Buchung vorbelegen.
-3. **Max Drawdown nach Vollverkauf.** Wird das Depot vollständig verkauft und später neu bespart, startet der TWR-Index bei 1, der alte Höchststand bleibt aber bestehen; der ausgewiesene Drawdown ist dann kein echter Kursrückgang. Randfall, bislang ohne Test.
+3. ~~**Max Drawdown nach Vollverkauf.**~~ Erledigt am 06.10.2026, Begründung und Testfälle im Abschnitt „Lückenschluss 06.10.2026“.
 4. **Standardwerte im Steuerreiter.** Kurs 01.01. und 31.12. sind mit demselben Wert vorbelegt, damit ist die Vorabpauschale ohne Eingabe immer 0 €. Die Kacheln zeigen 0,00 € statt „Kurse fehlen“. Bewusst so gelassen, weil das Umsetzungsdokument Nutzereingabe vorsieht; eine Kennzeichnung „vorläufig“ wäre möglich.
+5. **Kurse im Steuerreiter gelten für alle Steuerjahre.** Eingaben (Fondstyp, Kurs 01.01., Kurs 31.12.) hängen an der Position, nicht am Jahr. Wer 2026 Kurse einträgt und auf 2025 umschaltet, sieht dieselben Werte unter „Kurs 01.01.2025“. Optionen: (a) Kurse je Jahr speichern, Fondstyp je Position behalten (Empfehlung), (b) beim Jahreswechsel alle Eingaben zurücksetzen, (c) so lassen. Gefunden am 06.10.2026, nicht geändert, weil es die Bedienung betrifft. Die Vorabpauschalen-Eingaben je Verkauf liegen in einem eigenen Zustand (Schlüssel: Buchung des Verkaufs), getrennt von Fondstyp und Kursen. In der ersten Fassung vom 06.10.2026 lagen sie in den Positionseinstellungen; dadurch hat schon die erste Eingabe die Kursvorbelegung des gerade gewählten Jahres für alle Jahre festgeschrieben (E2E-Datei: nach Eingabe im Jahr 2026 zeigte 2025 Kurs 120,00 statt 100,00). Das ist behoben; eine Eingabe beim Verkauf löst diesen Effekt nicht mehr aus. Wer Fondstyp oder Kurse ändert, löst ihn weiterhin aus.
+
+## Lückenschluss 06.10.2026
+
+Branch `fix/k1-luecken` auf Stand `origin/main` (`abf057e`).
+
+### Prüfergebnisse
+
+Lokal unter Windows 11 mit Node 22.23.2, pnpm 10.34.5 und Chromium Headless Shell 1234. `packageManager` steht seit dem 06.10.2026 wie in K2 und K3 auf `pnpm@10.34.5`; vorher pinnte das Repo 10.28.0, und die automatische Versionsumschaltung von pnpm schlug auf diesem Rechner fehl. Die CI übernimmt die Version aus `packageManager`.
+
+| Schritt | Ausgangslage vor den Änderungen | Nach den Änderungen |
+|---|---|---|
+| `pnpm install --frozen-lockfile` | grün | grün |
+| `pnpm typecheck` | grün | grün |
+| `pnpm lint` | grün | grün |
+| `pnpm test` | 127 Tests grün (csv 42, pdf 1, web 84) und 1 offener `todo` | 155 Tests grün (csv 50, pdf 1, web 104) und 1 offener `todo` |
+| `pnpm build` | grün | grün |
+| `pnpm test:e2e` mit `CI=true`, `E2E_SERVER=start` | 7 Tests grün | 10 Tests grün |
+| axe-core 4.14 (WCAG 2.1 AA und Best Practices), 11 Seitenzustände je Desktop 1280 px und Mobil 390 px | nicht gemessen | 0 Verstöße |
+
+Nachprüfung nach dem Review am 06.10.2026: Die Umschaltung von pnpm war für diesen Lauf nicht abgeschaltet. Typecheck, Lint, Unit-Tests und Build liefen deshalb mit denselben Befehlen wie die Paket-Skripte (`tsc --noEmit`, `eslint`, `vitest run`, `next build`), direkt aus `node_modules/.bin` je Paket. Die E2E-Tests liefen mit `CI=true` und der unveränderten `playwright.config.ts`; nur der Serverstart lief direkt über `next start` statt `pnpm start`. Ergebnisse wie in der Tabelle.
+
+Der offene `todo` ist Fall D (Bezugsgröße und Kürzungsregel bei unterjährigem Kauf), siehe „Zu verifizieren“, Punkt 1 und 2.
+
+### Texte zu Quellcode und Startseite
+
+- Startseite, Impressum, Datenschutzerklärung und Nutzungsbedingungen behaupten keine öffentliche Einsehbarkeit mehr („Der Quellcode steht unter der MIT-Lizenz.“). Es gibt keinen Link auf das private Repository. Stand der Rechtsseiten: 06.10.2026.
+- Startseite: KontoKlar ist verlinkt (https://kontoklar-eight.vercel.app/projects/kontoklar, neuer Tab, `rel="noopener noreferrer"`), NetzRadar steht als „in Arbeit“ ohne Link. Die Datenschutzerklärung nennt in Abschnitt 6 diesen externen Link statt GitHub.
+- Der E2E-Test „Startseite und Rechtsseiten“ prüft Ziel, `rel` und `target` des Links und den Hinweis „in Arbeit“. Danach ruft er `/`, `/impressum`, `/datenschutz` und `/nutzungsbedingungen` auf (jeweils HTTP 200) und prüft, dass keine der vier Seiten „quelloffen“, „GitHub“ oder einen Satz mit „Quellcode … zur Verfügung“ enthält.
+- **Voraussetzung für Merge und Deploy (Stand 06.10.2026):** Die live verlinkte KontoKlar-Seite hat noch ein unvollständiges Impressum. https://kontoklar-eight.vercel.app/impressum zeigt am 06.10.2026 „[Platzhalter: Straße und Hausnummer]“, „[Platzhalter: PLZ]“ und „[Platzhalter: E-Mail-Adresse]“, https://kontoklar-eight.vercel.app/datenschutz zeigt „[Platzhalter: Anschrift]“, „[Platzhalter: E-Mail-Adresse]“ und „[Platzhalter: Datum der Veröffentlichung]“. Im lokalen K2-Repo (Branch `fix/k2-sicherheit-und-luecken`) sind die Platzhalter entfernt, aber nicht committet und nicht deployt. Dieser Branch sollte deshalb erst gemergt und deployt werden, wenn die K2-Rechtsseiten live sind. Andernfalls verlinkt die Startseite aktiv auf ein Angebot mit unvollständigem Impressum, und Abschnitt 6 der Datenschutzerklärung verweist auf dessen Datenschutzerklärung. Die Alternative entscheidet Dennis: KontoKlar bis dahin wie NetzRadar ohne Link zeigen.
+
+### CI
+
+- Playwright-Reporter in der CI: `[["list"], ["html", { open: "never" }]]` statt `"github"`. Dadurch entsteht `apps/web/playwright-report/`, das `upload-artifact` bei Fehlern hochlädt; vorher war das Artefakt leer. Lokal geprüft: Der Ordner entsteht mit `index.html`.
+- `pnpm/action-setup@v6` und `actions/upload-artifact@v7` wie in K3. Beide Tags existieren (am 06.10.2026 per `gh api` geprüft).
+
+### Zeilenenden
+
+`.gitattributes` mit `* text=auto eol=lf`, `*.pdf binary`, `*.png binary`. Alle Textdateien liegen im Index bereits mit LF vor (`git ls-files --eol`). Nach dem Anlegen zeigt `git status` keine zusätzlichen geänderten Dateien; eine Renormalisierung ist nicht nötig.
+
+### Palette und Kontrast
+
+Hex-Werte an K2 und K3 angeglichen, die Token-Namen bleiben. Geändert in `globals.css`, `packages/charts/src/theme.ts`, `packages/pdf/src/ReportDocument.tsx` und `apps/web/app/icon.svg`:
+
+| Token | alt | neu |
+|---|---|---|
+| ink | #141414 | #111111 |
+| paper | #fbf9f4 | #fbfaf6 |
+| surface | #ffffff | #ffffff |
+| line | #e2dccf | #e3e0d6 |
+| muted | #6b665c | #6b6b66 |
+| gold | #b8962e | #b8912f |
+| gold-deep | #7f6619 | #7d5f17 |
+| gold-soft | #f3ead0 | #f3e9c9 |
+| green | #2f5d3a | #2f6b3a |
+| green-soft | #e3ede4 | #dfeadf |
+| bordeaux | #6e1e2b | #7a1f2b |
+| bordeaux-soft | #f1e1e3 | #f1dcdf |
+
+Kontrast nach WCAG 2.1 (relative Leuchtdichte, sRGB). Für Text gilt AA 4,5:1:
+
+| Text auf Fläche | alt | neu |
+|---|---|---|
+| muted auf paper | 5,42 | 5,13 |
+| muted auf surface | 5,71 | 5,36 |
+| muted auf gold-soft | 4,75 | **4,42** |
+| gold-deep auf paper | 5,23 | 5,71 |
+| gold-deep auf surface | 5,50 | 5,96 |
+| gold-deep auf gold-soft | 4,58 | 4,92 |
+| green auf paper | 7,26 | 6,12 |
+| green auf surface | 7,64 | 6,39 |
+| bordeaux auf surface | 11,15 | 10,20 |
+| bordeaux auf bordeaux-soft | 8,82 | 7,79 |
+| paper auf ink | 17,51 | 18,08 |
+| paper auf green (Hover der Schaltflächen) | 7,26 | 6,12 |
+| gold auf surface | 2,82 | 2,95 |
+
+Folgen:
+
+1. Grau auf Gold-Soft liegt mit 4,42:1 knapp unter AA. Das kam nur in der Drop-Zone vor, während eine Datei darübergezogen wird; die beiden Hinweiszeilen sind in diesem Zustand jetzt `ink`.
+2. Gold erreicht auch mit dem neuen Wert keine 4,5:1 und bleibt Linien und Flächen vorbehalten. Im PDF war die kleine Kopfzeile über dem Titel noch in Gold gesetzt; sie nutzt jetzt Gold-Deep (5,96:1 auf Weiß).
+3. axe-core findet weder in Desktop- noch in Mobilbreite Verstöße. Geprüft wurden Startseite, die drei Rechtsseiten, die Projektseite, alle vier Reiter mit der Beispieldatei und der Steuerreiter mit Verkauf, einmal mit gültiger und einmal mit ungültiger Eingabe. Die Drop-Zone im Ziehzustand prüft axe nicht; dafür gilt die Rechnung oben.
+4. Die README-Screenshots (`docs/screenshots/`) sind mit der neuen Palette neu erzeugt: Trade-Republic-Testdatei, Viewport 1280 px, Skalierung 1,5, ETF-Kurs 31.12. auf 95,00 €.
+
+### UTF-16-Exporte
+
+`packages/csv/src/filekind.ts` erkennt nach der PDF- und ZIP-Prüfung die BOM `FF FE` (UTF-16 LE) und `FE FF` (UTF-16 BE). Die ersten 4 KB nach der BOM werden mit `TextDecoder("utf-16le")` bzw. `TextDecoder("utf-16be")` dekodiert; die Prüfung auf Null- und Steuerzeichen läuft dann auf den Codeeinheiten statt auf den Bytes. `decodeCsvBytes` dekodiert die ganze Datei mit derselben Kodierung und entfernt die BOM. Ohne BOM bleibt es beim bisherigen Verhalten: UTF-8 strikt, sonst Windows-1252. UTF-16 ohne BOM enthält Nullbytes und wird weiter abgelehnt.
+
+Tests in `filekind.test.ts`, alle mit von Hand gebauten Byte-Arrays:
+
+- „Datum;Typ\r\n“ in UTF-16 LE
+- „Gebühr;10 €“ in UTF-16 BE (ü = `00 FC`, € = `20 AC`)
+- € in LE als `AC 20`
+- UTF-16 ohne BOM bleibt Binärdatei
+- BOM vor Null-Codeeinheiten ist Binärdatei
+- 1 Steuerzeichen unter 10 Codeeinheiten (10 % > 5 %) ist Binärdatei
+- nur BOM ist leer
+- Scalable-Export als UTF-16 LE wird vollständig eingelesen
+
+E2E: Die Trade-Republic-Testdatei als UTF-16 LE mit BOM ergibt denselben Report (8 Buchungen, TTWROR +2,41 %).
+
+### Max Drawdown nach Vollverkauf
+
+Bisher wurde der Drawdown-Index am ersten Bewertungspunkt mit Bestand nach einem Punkt ohne Bestand auf 1 zurückgesetzt, der alte Höchststand blieb aber stehen. Das ergab je nach Vorgeschichte einen zu hohen oder einen zu niedrigen Wert. Ein Depotwert von 0 nach dem Vollverkauf zählte dagegen nicht als −100 %, weil der Verkaufserlös als Zahlungsstrom in die Periodenrendite eingeht.
+
+Neu in `metrics/drawdown.ts`: Der Index startet beim ersten Punkt mit Bestand bei 1 und wird danach nie zurückgesetzt. Perioden, die an einem Punkt ohne Bestand beginnen, gehen mit 0 % ein. Der Index ist damit genau die Verkettung, aus der auch die TTWROR entsteht (`periodReturns` überspringt dieselben Perioden). Der Drawdown misst nur Kursrückgänge, während Kapital investiert ist; die Zeit ohne Bestand ist neutral.
+
+| Fall (Wert / Zahlungsstrom je Buchungstag) | alt | neu | Handrechnung neu |
+|---|---|---|---|
+| 1.000 / +1.000, 0 / −1.100, 450 / +450, 405 / 0 | 18,18 % | 10,00 % | Index 1, 1,1, 1,1, dann 1,1 × 405/450 = 0,99; (1,1 − 0,99)/1,1 = 10 % |
+| dieselben ersten drei Punkte (Neukauf ohne Kursänderung) | 9,09 % | 0,00 % | Index bleibt 1,1 |
+| 1.000 / +1.000, 0 / −900, 0 / −5 (Ausschüttung nach dem Verkauf) | 10,00 % | 10,00 % | Index 1, dann 0,9, danach unverändert; kein −100 % |
+| 1.000 / +1.000, 0 / −800, 500 / +500, 400 / 0 | 20,00 % | 36,00 % | Index 1, 0,8, 0,8, dann 0,8 × 400/500 = 0,64 |
+
+Die Werte „alt“ sind mit der vorherigen Implementierung nachgerechnet. Tests stehen in `volatility-drawdown.test.ts`, Abschnitt „Max Drawdown nach Vollverkauf“. Dazu kommt ein Durchlauf über `buildReport` mit vier Buchungen (Kauf 10 @ 100, Verkauf 10 @ 110, Kauf 5 @ 90, Kauf 1 @ 81): Drawdown 10 %, TTWROR −1 %. Bei der Trade-Republic-Testdatei ändert sich nichts (−0,01 %).
+
+### Steuerkonstanten geprüft
+
+| Konstante | im Code | Quelle | Ergebnis |
+|---|---|---|---|
+| Basiszins 2025 | 2,53 % | BMF-Schreiben vom 10.01.2025, IV C 1 - S 1980/00230/009/002, BStBl I 2025, 273 (Wortlaut über die Haufe-Rechtsquellendatenbank) | stimmt |
+| Basiszins 2026 | 3,20 % | BMF-Schreiben vom 13.01.2026, IV C 1 - S 1980/00230/012/001 (Haufe, Meldung „Basiszins zum 2.1.2026“) | stimmt |
+| Teilfreistellung Aktienfonds | 30 % | § 20 Abs. 1 Satz 1 InvStG (gesetze-im-internet.de) | stimmt |
+| Teilfreistellung Mischfonds | 15 % | § 20 Abs. 2 InvStG: Hälfte der Aktienteilfreistellung | stimmt |
+| Teilfreistellung Immobilienfonds und Auslands-Immobilienfonds | 60 % und 80 % | § 20 Abs. 3 InvStG | stimmt |
+| Sparer-Pauschbetrag | 1.000 € und 2.000 € | § 20 Abs. 9 Satz 1 und 2 EStG | stimmt |
+| Zwölftelung, Zuflusszeitpunkt | 1/12 je vollem Monat vor dem Erwerbsmonat; Zufluss am ersten Werktag des Folgejahres | § 18 Abs. 2 und 3 InvStG | stimmt; ob der Basisertrag oder die Vorabpauschale gekürzt wird, bleibt offen („Zu verifizieren“, Punkt 1) |
+
+Die Teilfreistellungssätze gelten für Anteile im Privatvermögen; die höheren Sätze für Betriebsvermögen bildet DepotDoktor nicht ab. Im Code ist nichts geändert.
+
+### Angesetzte Vorabpauschalen beim Verkauf
+
+Rechtsgrundlage, am Gesetzestext geprüft: § 19 Abs. 1 Satz 3 InvStG („Der Gewinn ist um die während der Besitzzeit angesetzten Vorabpauschalen zu vermindern.“) und Satz 4 (in voller Höhe, ungeachtet der Teilfreistellung).
+
+Umsetzung:
+
+1. Je Verkauf im Steuerjahr gibt es im Steuerreiter ein optionales Feld „Für diese Anteile in Vorjahren angesetzte Vorabpauschalen (€, optional)“. Ohne Eingabe wird nichts abgezogen, das bisherige Ergebnis bleibt also gleich.
+2. Das Feld erscheint nur, wenn der Fondstyp nicht „kein Fonds“ ist und der Verkauf nach FIFO mindestens eine Tranche aus einem früheren Kalenderjahr verbraucht. Begründung: Die Vorabpauschale eines Jahres gilt erst am ersten Werktag des Folgejahres als zugeflossen (§ 18 Abs. 3 InvStG). Anteile, die im selben Kalenderjahr gekauft und verkauft werden, können also keine angesetzte Vorabpauschale haben. Die Bedingung ist notwendig, nicht hinreichend; den Betrag liefert die Bank.
+3. Gewinn = Erlös − Anschaffungskosten (FIFO) − angesetzte Vorabpauschalen. „Angesetzte Vorabpauschalen“ ist die Summe aus der Anrechnung je Tranche in `tax/fifo.ts` (derzeit immer 0, siehe unten) und dem eingetragenen Betrag. Angezeigt wird genau diese Summe, sodass Erlös − Anschaffungskosten − angezeigter Betrag immer den angezeigten Gewinn ergibt. Der Betrag wird nicht um die Teilfreistellung gekürzt. Unlesbare oder negative Eingaben werden als Fehler angezeigt und ziehen nichts ab.
+4. Die Eingabe hängt an der Buchung des Verkaufs und liegt in einem eigenen Zustand, nicht in den Positionseinstellungen (Fondstyp, Kurse). Ein Wechsel des Steuerjahres überträgt sie deshalb nicht auf andere Verkäufe und ändert die Kursvorbelegung anderer Jahre nicht. Beim Laden einer neuen Datei werden die Eingaben verworfen.
+5. Im PDF nennt die Fußnote der Position den Abzug und den geminderten Gewinn; die Kachel „Realisierte Gewinne“ enthält den Abzug.
+6. Zugänglichkeit: Das Feld hat als Namen nur „Für diese Anteile in Vorjahren angesetzte Vorabpauschalen (€, optional)“ (`label` mit `for`). Hinweis und Fehlermeldung sind eigene Elemente mit `id` und hängen über `aria-describedby` am Feld; die Fehlermeldung nur, solange die Eingabe ungültig ist (`aria-invalid="true"`).
+
+Handrechnung im Test `sale-credit.test.ts`: Kauf 10 @ 100 € am 03.03.2025, Kauf 10 @ 110 € am 02.02.2026, Verkauf 15 @ 120 € am 04.05.2026. FIFO: 10 × (120 − 100) + 5 × (120 − 110) = 250 €. Mit 12,34 € angesetzten Vorabpauschalen sind es 237,66 €. Weitere Fälle:
+
+- leere Eingabe: 250 €
+- 1.234,50 €: −984,50 €
+- „abc“ und „−5“ sind ungültig: 250 €
+- Fondstyp „kein Fonds“: kein Feld, 250 €
+- Verkauf nur aus Anteilen desselben Jahres: kein Feld, 50 €
+- Eingabe 12,34 € im Jahr 2026: Die Positionseinstellungen bleiben die Vorbelegung, 2025 Kurs 100,00 € (letzter Kurs bis Ende 2025), 2026 Kurs 120,00 € (Verkaufskurs)
+- Anrechnung je Tranche 1,50 € × 10 Stück = 15,00 € plus Eingabe 12,34 €: angezeigt 27,34 €, Gewinn 1.800 − 1.550 − 27,34 = 222,66 €. Ohne gültige Eingabe (leer, „abc“, Fondstyp „kein Fonds“) bleiben 15,00 € und 250 − 15 = 235,00 €
+
+E2E: Kauf 10 @ 100 € im Jahr 2025, Verkauf 10 @ 120 € im Jahr 2026. Geprüft werden:
+
+- Die Eingabe von 25,30 € ergibt 174,70 € statt 200,00 € in der Verkaufszeile und in der Kachel „Realisierte Gewinne 2026 (FIFO)“; die Kachel wird über ihre eigene `data-testid` angesprochen.
+- Nach dem Wechsel auf 2025 stehen Kurs 01.01. und 31.12. weiter auf der Vorbelegung 100,00. Nach dem Wechsel zurück auf 2026 steht die Eingabe noch da.
+- Zugänglicher Name und zugängliche Beschreibung des Felds.
+- Ungültige Eingabe: Fehlermeldung in der Beschreibung, `aria-invalid`, Verkaufszeile und Kachel wieder bei 200,00 €.
+
+Die Anrechnung je Tranche in `tax/fifo.ts` (`taxedVorabpauschalePerShare`) ist weiterhin 0, weil der Export keine Vorjahreskurse enthält. Rechnung und Anzeige verwenden die Summe beider Quellen (Punkt 3). Wird die Tranchen-Anrechnung künftig befüllt, etwa aus selbst geschätzten Vorabpauschalen der Vorjahre, beschreiben beide Quellen dieselbe Größe. Dann muss feststehen, welche Quelle gilt, damit derselbe Betrag nicht doppelt abgezogen wird; zum Beispiel ersetzt die Eingabe die Schätzung. Solange der Wert 0 ist, stellt sich die Frage nicht.
