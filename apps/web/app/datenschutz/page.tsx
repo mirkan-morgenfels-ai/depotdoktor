@@ -63,8 +63,9 @@ export default function DatenschutzPage() {
 
       <LegalSection title="6. Externe Links">
         <p>
-          Die Seite verlinkt auf externe Angebote wie GitHub. Beim Anklicken eines Links verlassen Sie diese Seite; für die
-          Datenverarbeitung dort gilt die Datenschutzerklärung des jeweiligen Anbieters. Es werden keine Inhalte Dritter
+          Die Startseite verlinkt auf weitere Projekte, die unter eigener Adresse betrieben werden, derzeit KontoKlar. Beim
+          Anklicken eines solchen Links verlassen Sie diese Seite; für die Datenverarbeitung dort gilt die
+          Datenschutzerklärung des jeweiligen Angebots. Es werden keine Inhalte Dritter
           (Schriften, Skripte, Videos, Karten) beim Aufruf dieser Seite nachgeladen.
         </p>
       </LegalSection>

@@ -46,7 +46,7 @@ export default function ImpressumPage() {
 
       <LegalSection title="Urheberrecht und Lizenz">
         <p>
-          Der Quellcode der Projekte steht unter der MIT-Lizenz auf GitHub zur Verfügung. Texte und Gestaltung dieser Seite
+          Der Quellcode der Projekte steht unter der MIT-Lizenz. Texte und Gestaltung dieser Seite
           unterliegen dem deutschen Urheberrecht. Genannte Marken und Produktnamen (etwa Trade Republic, Scalable Capital)
           gehören ihren jeweiligen Inhabern; es besteht keine Verbindung zu diesen Unternehmen.
         </p>
