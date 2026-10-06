@@ -61,6 +61,76 @@ describe("decodeCsvBytes", () => {
   });
 });
 
+describe("UTF-16 mit BOM", () => {
+  const utf16leWithBom = (text: string) => {
+    const bytes = [0xff, 0xfe];
+    for (let index = 0; index < text.length; index += 1) {
+      const code = text.charCodeAt(index);
+      bytes.push(code & 0xff, code >> 8);
+    }
+    return new Uint8Array(bytes);
+  };
+
+  test("UTF-16 LE mit BOM FF FE ist Text und wird ohne BOM dekodiert", () => {
+    const bytes = new Uint8Array([
+      0xff, 0xfe, 0x44, 0x00, 0x61, 0x00, 0x74, 0x00, 0x75, 0x00, 0x6d, 0x00, 0x3b, 0x00, 0x54, 0x00, 0x79, 0x00, 0x70, 0x00,
+      0x0d, 0x00, 0x0a, 0x00,
+    ]);
+    expect(detectFileKind(bytes)).toBe("text");
+    expect(decodeCsvBytes(bytes)).toBe("Datum;Typ\r\n");
+  });
+
+  test("UTF-16 BE mit BOM FE FF: Umlaut ü (00 FC) und Euro-Zeichen (20 AC) bleiben erhalten", () => {
+    const bytes = new Uint8Array([
+      0xfe, 0xff, 0x00, 0x47, 0x00, 0x65, 0x00, 0x62, 0x00, 0xfc, 0x00, 0x68, 0x00, 0x72, 0x00, 0x3b, 0x00, 0x31, 0x00, 0x30,
+      0x00, 0x20, 0x20, 0xac,
+    ]);
+    expect(detectFileKind(bytes)).toBe("text");
+    expect(decodeCsvBytes(bytes)).toBe("Gebühr;10 €");
+  });
+
+  test("UTF-16 LE: Euro-Zeichen U+20AC steht als AC 20", () => {
+    const bytes = new Uint8Array([0xff, 0xfe, 0x31, 0x00, 0x30, 0x00, 0x20, 0x00, 0xac, 0x20]);
+    expect(decodeCsvBytes(bytes)).toBe("10 €");
+  });
+
+  test("UTF-16 ohne BOM bleibt wegen der Nullbytes eine Binärdatei", () => {
+    const bytes = new Uint8Array([0x44, 0x00, 0x61, 0x00, 0x74, 0x00, 0x75, 0x00, 0x6d, 0x00]);
+    expect(detectFileKind(bytes)).toBe("binary");
+  });
+
+  test("BOM FF FE vor Null-Codeeinheiten ist eine Binärdatei", () => {
+    expect(detectFileKind(new Uint8Array([0xff, 0xfe, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00]))).toBe("binary");
+  });
+
+  test("BOM FF FE mit 1 Steuerzeichen unter 10 Codeeinheiten (10 % > 5 %) ist eine Binärdatei", () => {
+    const bytes = new Uint8Array([
+      0xff, 0xfe, 0x01, 0x00, 0x41, 0x00, 0x41, 0x00, 0x41, 0x00, 0x41, 0x00, 0x41, 0x00, 0x41, 0x00, 0x41, 0x00, 0x41, 0x00,
+      0x41, 0x00,
+    ]);
+    expect(detectFileKind(bytes)).toBe("binary");
+  });
+
+  test("Datei nur aus einer UTF-16-BOM ist leer", () => {
+    expect(detectFileKind(new Uint8Array([0xff, 0xfe]))).toBe("empty");
+    expect(detectFileKind(new Uint8Array([0xfe, 0xff]))).toBe("empty");
+  });
+
+  test("Scalable-Export als UTF-16 LE wird erkannt und eingelesen", () => {
+    const bytes = utf16leWithBom(
+      "date;time;status;reference;description;assetType;type;isin;shares;price;amount;fee;tax;currency\r\n" +
+        '2026-01-06;08:00:00;Executed;"SCALTEST00002";"Testfonds Welt UCITS ETF";Security;Buy;IE00TEST0001;10;80,00;-800,99;0,99;0,00;EUR\r\n',
+    );
+    expect(bytes.subarray(0, 4)).toEqual(new Uint8Array([0xff, 0xfe, 0x64, 0x00]));
+    expect(detectFileKind(bytes)).toBe("text");
+    const result = parseBrokerCsv(decodeCsvBytes(bytes));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.broker).toBe("scalable");
+    expect(result.transactions.map((t) => `${t.type} ${t.shares} ${t.amount}`)).toEqual(["buy 10 -800.99"]);
+  });
+});
+
 describe("parseBrokerCsv mit PDF-Inhalt", () => {
   test("bricht mit der PDF-Meldung ab statt Spalten zu raten", () => {
     const result = parseBrokerCsv("%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n");
