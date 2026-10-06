@@ -2,18 +2,19 @@ import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { ReportMetric, ReportPdfData, ReportTable } from "./types";
 
 const COLORS = {
-  ink: "#141414",
-  muted: "#6b665c",
-  line: "#e2dccf",
-  gold: "#b8962e",
-  green: "#2f5d3a",
-  bordeaux: "#6e1e2b",
-  paper: "#fbf9f4",
+  ink: "#111111",
+  muted: "#6b6b66",
+  line: "#e3e0d6",
+  gold: "#b8912f",
+  goldDeep: "#7d5f17",
+  green: "#2f6b3a",
+  bordeaux: "#7a1f2b",
+  paper: "#fbfaf6",
 } as const;
 
 const styles = StyleSheet.create({
   page: { padding: 48, paddingBottom: 72, fontFamily: "Helvetica", fontSize: 9.5, color: COLORS.ink, lineHeight: 1.4 },
-  eyebrow: { fontSize: 8, color: COLORS.gold, letterSpacing: 1.5, textTransform: "uppercase" },
+  eyebrow: { fontSize: 8, color: COLORS.goldDeep, letterSpacing: 1.5, textTransform: "uppercase" },
   title: { fontFamily: "Times-Roman", fontSize: 26, lineHeight: 1.15, marginTop: 6 },
   subtitle: { fontSize: 10, color: COLORS.muted, marginTop: 6 },
   meta: { fontSize: 8, color: COLORS.muted, marginTop: 10, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: COLORS.line },

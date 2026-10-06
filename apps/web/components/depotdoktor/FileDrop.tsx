@@ -28,10 +28,12 @@ export function FileDrop({ onFile }: { onFile: (file: File) => void }) {
       }
     >
       <p className="font-serif text-xl">CSV-Export hierher ziehen</p>
-      <p className="mt-2 text-sm text-muted">
+      <p className={active ? "mt-2 text-sm text-ink" : "mt-2 text-sm text-muted"}>
         Trade Republic: App → Kontoauszüge → Transaktionsexport. Scalable Capital: Broker → Transaktionen → CSV.
       </p>
-      <p className="mt-1 text-sm text-muted">Nur CSV. PDF-Kontoauszüge und Excel-Dateien kann DepotDoktor nicht lesen.</p>
+      <p className={active ? "mt-1 text-sm text-ink" : "mt-1 text-sm text-muted"}>
+        Nur CSV. PDF-Kontoauszüge und Excel-Dateien kann DepotDoktor nicht lesen.
+      </p>
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
