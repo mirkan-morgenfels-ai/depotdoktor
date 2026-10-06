@@ -26,7 +26,13 @@ export interface TaxPosition {
   distributionsInYear: Decimal;
   lastKnownPrice: Decimal | null;
   lastKnownPriceDate: string | null;
-  salesInYear: FifoSaleResult[];
+  salesInYear: TaxSale[];
+}
+
+export interface TaxSale extends FifoSaleResult {
+  id: string;
+  date: string;
+  includesPriorYearLots: boolean;
 }
 
 export interface PositionPriceInput {
@@ -101,7 +107,14 @@ export function buildTaxPositions(transactions: readonly Transaction[], year: nu
     } else if (tx.type === "sell") {
       const sale = fifoSell(entry.lots, d(tx.shares), d(tx.amount).abs());
       entry.lots = sale.remaining;
-      if (txYear === year) entry.position.salesInYear.push(sale);
+      if (txYear === year) {
+        entry.position.salesInYear.push({
+          ...sale,
+          id: tx.id,
+          date: tx.date,
+          includesPriorYearLots: sale.consumed.some((c) => yearOf(c.date) < txYear),
+        });
+      }
     } else if (txYear === year) {
       entry.position.distributionsInYear = entry.position.distributionsInYear.plus(d(tx.amount).abs());
     }

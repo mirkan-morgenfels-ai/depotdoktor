@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { StatTile } from "@portfolio/ui";
 import { formatEur, formatNumber, formatPercent } from "@/lib/depotdoktor/money";
 import { formatDateDe } from "@/lib/depotdoktor/dates";
@@ -14,11 +15,52 @@ export interface TaxTabProps {
   summary: TaxSummary;
   onYearChange: (year: number) => void;
   onSettingsChange: (positionKey: string, patch: Partial<PositionSettings>) => void;
+  onCreditChange: (saleId: string, value: string) => void;
 }
 
 const inputClass = "mt-1 block w-full rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink tabular-nums";
 
-export function TaxTab({ summary, onYearChange, onSettingsChange }: TaxTabProps) {
+interface SaleCreditFieldProps {
+  value: string;
+  valid: boolean;
+  onChange: (value: string) => void;
+}
+
+function SaleCreditField({ value, valid, onChange }: SaleCreditFieldProps) {
+  const baseId = useId();
+  const inputId = `${baseId}-input`;
+  const hintId = `${baseId}-hint`;
+  const errorId = `${baseId}-error`;
+  return (
+    <div className="mt-2 max-w-md text-xs text-muted">
+      <label htmlFor={inputId} className="block">
+        Für diese Anteile in Vorjahren angesetzte Vorabpauschalen (€, optional)
+      </label>
+      <input
+        id={inputId}
+        inputMode="decimal"
+        value={value}
+        placeholder="0,00"
+        onChange={(e) => onChange(e.target.value)}
+        className={inputClass}
+        aria-invalid={!valid}
+        aria-describedby={valid ? hintId : `${hintId} ${errorId}`}
+        data-testid="tax-sale-credit"
+      />
+      <p id={hintId} className="mt-1">
+        Summe der Beträge, die Ihre Bank für diese Anteile als Vorabpauschale angesetzt hat, in voller Höhe vor
+        Teilfreistellung. Mindert den Gewinn nach § 19 Abs. 1 Satz 3 und 4 InvStG.
+      </p>
+      {valid ? null : (
+        <p id={errorId} className="mt-1 text-bordeaux">
+          Bitte einen Betrag ab 0 als Dezimalzahl eintragen. Bis dahin wird nichts abgezogen.
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function TaxTab({ summary, onYearChange, onSettingsChange, onCreditChange }: TaxTabProps) {
   const { year, rows, totals } = summary;
 
   return (
@@ -58,6 +100,7 @@ export function TaxTab({ summary, onYearChange, onSettingsChange }: TaxTabProps)
           value={formatEur(totals.realizedGain)}
           hint="vor Teilfreistellung und Steuer"
           tone={totals.realizedGain.gt(0) ? "positive" : totals.realizedGain.lt(0) ? "negative" : "neutral"}
+          testId="tax-realized-gain"
         />
       </div>
 
@@ -65,7 +108,7 @@ export function TaxTab({ summary, onYearChange, onSettingsChange }: TaxTabProps)
         <p className="rounded-lg border border-line bg-surface p-6 text-sm text-muted">Keine Wertpapierpositionen im Jahr {year}.</p>
       ) : null}
 
-      {rows.map(({ position, settings, estimate, realizedGain }) => (
+      {rows.map(({ position, settings, estimate, sales, realizedGain }) => (
         <section key={position.key} className="rounded-lg border border-line bg-surface p-6" data-testid="tax-position">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -160,15 +203,28 @@ export function TaxTab({ summary, onYearChange, onSettingsChange }: TaxTabProps)
             <p className="mt-4 text-sm text-bordeaux">Bitte Kurs am 01.01. und 31.12. als Dezimalzahl eintragen.</p>
           )}
 
-          {position.salesInYear.length > 0 ? (
+          {sales.length > 0 ? (
             <div className="mt-4 text-sm">
               <h3 className="font-medium">Verkäufe {year} (FIFO)</h3>
-              <ul className="mt-1 space-y-1 text-muted">
-                {position.salesInYear.map((sale, index) => (
-                  <li key={index}>
-                    {formatNumber(sale.sharesSold)} Stück verkauft, Erlös {formatEur(sale.proceeds)}, Anschaffungskosten {formatEur(sale.cost)}, Gewinn{" "}
-                    <span className={sale.gain.lt(0) ? "text-bordeaux" : "text-green"}>{formatEur(sale.gain)}</span>
-                    {sale.sharesUncovered.gt(0) ? ` (${formatNumber(sale.sharesUncovered)} Stück ohne bekannten Einstand)` : ""}
+              <ul className="mt-1 space-y-3 text-muted">
+                {sales.map(({ sale, creditAllowed, creditInput, creditValid, credit, gain }) => (
+                  <li key={sale.id} data-testid="tax-sale">
+                    <p>
+                      {formatDateDe(sale.date)}: {formatNumber(sale.sharesSold)} Stück verkauft, Erlös {formatEur(sale.proceeds)},
+                      Anschaffungskosten {formatEur(sale.cost)}
+                      {credit.gt(0) ? `, angesetzte Vorabpauschalen ${formatEur(credit)}` : ""}, Gewinn{" "}
+                      <span className={gain.lt(0) ? "text-bordeaux" : "text-green"} data-testid="tax-sale-gain">
+                        {formatEur(gain)}
+                      </span>
+                      {sale.sharesUncovered.gt(0) ? ` (${formatNumber(sale.sharesUncovered)} Stück ohne bekannten Einstand)` : ""}
+                    </p>
+                    {creditAllowed ? (
+                      <SaleCreditField
+                        value={creditInput}
+                        valid={creditValid}
+                        onChange={(value) => onCreditChange(sale.id, value)}
+                      />
+                    ) : null}
                   </li>
                 ))}
               </ul>

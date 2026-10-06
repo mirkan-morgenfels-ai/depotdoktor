@@ -106,7 +106,7 @@ export function buildReportPdfData(report: PerformanceReport, tax: TaxSummary, m
   ];
 
   const taxTables: ReportTable[] = tax.rows.map((row) => {
-    const { position, estimate, settings } = row;
+    const { position, estimate, settings, sales: saleRows } = row;
     const detailed = estimate !== null && estimate.fundType !== "none";
     const columns = detailed ? ["Anteil", "Stück", "Monate", "Basisertrag", "Vorabpauschale", "Steuerpflichtig", "Steuer"] : ["Hinweis"];
     const widths = detailed ? [0.22, 0.09, 0.09, 0.15, 0.15, 0.15, 0.15] : [1];
@@ -130,9 +130,9 @@ export function buildReportPdfData(report: PerformanceReport, tax: TaxSummary, m
             },
           ]
         : [{ cells: [estimate ? "Keine Vorabpauschale: kein Fonds (z. B. Einzelaktie oder Anleihe)." : "Keine Schätzung: Kurse am 01.01. und 31.12. fehlen."] }];
-    const sales = position.salesInYear.map(
-      (sale) =>
-        `Verkauf ${formatNumber(sale.sharesSold)} Stück: Erlös ${formatEur(sale.proceeds)}, Anschaffungskosten ${formatEur(sale.cost)}, Gewinn ${formatEur(sale.gain)} (FIFO)`,
+    const sales = saleRows.map(
+      ({ sale, credit, gain }) =>
+        `Verkauf ${formatDateDe(sale.date)}, ${formatNumber(sale.sharesSold)} Stück: Erlös ${formatEur(sale.proceeds)}, Anschaffungskosten ${formatEur(sale.cost)}${credit.gt(0) ? `, angesetzte Vorabpauschalen ${formatEur(credit)}` : ""}, Gewinn ${formatEur(gain)} (FIFO)`,
     );
     const footnoteParts = [
       `${FUND_TYPE_LABELS[settings.fundType]} · Kurs 01.01.: ${settings.yearStartPrice || "–"} € · Kurs 31.12.: ${settings.yearEndPrice || "–"} €`,

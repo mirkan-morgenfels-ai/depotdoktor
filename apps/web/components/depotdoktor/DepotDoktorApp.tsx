@@ -6,7 +6,7 @@ import { Disclaimer } from "@portfolio/legal";
 import { Button } from "@portfolio/ui";
 import { buildReport } from "@/lib/depotdoktor/report";
 import { SAMPLE_CSV_SCALABLE } from "@/lib/depotdoktor/sample";
-import { buildTaxSummary, type PositionSettings } from "@/lib/depotdoktor/tax/summary";
+import { buildTaxSummary, type PositionSettings, type SaleCreditInputs } from "@/lib/depotdoktor/tax/summary";
 import { buildReportPdfData, BROKER_LABELS } from "@/lib/depotdoktor/pdf-data";
 import { transactionsToCsv } from "@/lib/depotdoktor/export-csv";
 import { downloadBlob, timestampForFilename } from "@/lib/depotdoktor/download";
@@ -38,15 +38,20 @@ export function DepotDoktorApp() {
   const [tab, setTab] = useState<TabId>("performance");
   const [taxYear, setTaxYear] = useState<number>(TAX_YEARS[0] ?? 2026);
   const [taxSettings, setTaxSettings] = useState<Record<string, PositionSettings>>({});
+  const [saleCredits, setSaleCredits] = useState<SaleCreditInputs>({});
 
   const transactions = useMemo(() => parsed?.transactions ?? [], [parsed]);
   const report = useMemo(() => (parsed ? buildReport(transactions) : null), [parsed, transactions]);
-  const taxSummary = useMemo(() => buildTaxSummary(transactions, taxYear, taxSettings), [transactions, taxYear, taxSettings]);
+  const taxSummary = useMemo(
+    () => buildTaxSummary(transactions, taxYear, taxSettings, saleCredits),
+    [transactions, taxYear, taxSettings, saleCredits],
+  );
 
   function loadText(text: string, name: string) {
     const result = parseBrokerCsv(text);
     setFileName(name);
     setTaxSettings({});
+    setSaleCredits({});
     if (result.ok) {
       setParsed(result);
       setError(null);
@@ -101,6 +106,7 @@ export function DepotDoktorApp() {
     setError(null);
     setFileName(null);
     setTaxSettings({});
+    setSaleCredits({});
   }
 
   const updateTaxSettings = useCallback(
@@ -111,6 +117,10 @@ export function DepotDoktorApp() {
     },
     [taxSummary],
   );
+
+  const updateSaleCredit = useCallback((saleId: string, value: string) => {
+    setSaleCredits((prev) => ({ ...prev, [saleId]: value }));
+  }, []);
 
   async function exportPdf() {
     if (!parsed || !report) return;
@@ -208,7 +218,14 @@ export function DepotDoktorApp() {
       <div id={`panel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`}>
         {report && tab === "performance" ? <PerformanceTab report={report} /> : null}
         {report && tab === "allocation" ? <AllocationTab report={report} /> : null}
-        {tab === "tax" ? <TaxTab summary={taxSummary} onYearChange={setTaxYear} onSettingsChange={updateTaxSettings} /> : null}
+        {tab === "tax" ? (
+          <TaxTab
+            summary={taxSummary}
+            onYearChange={setTaxYear}
+            onSettingsChange={updateTaxSettings}
+            onCreditChange={updateSaleCredit}
+          />
+        ) : null}
         {tab === "transactions" ? <TransactionsTab transactions={parsed.transactions} /> : null}
       </div>
 
