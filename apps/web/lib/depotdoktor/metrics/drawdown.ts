@@ -26,15 +26,15 @@ export function maxDrawdownFromPoints(points: readonly ValuationPoint[]): Drawdo
   let worst = ZERO;
   let worstPeakDate: string | null = null;
   let worstTroughDate: string | null = null;
-  let index = ZERO;
-  const one = new Decimal(1);
+  let index: Decimal | null = null;
   for (let i = 0; i < points.length; i += 1) {
     const point = points[i]!;
     const previous = i > 0 ? points[i - 1]! : null;
-    if (previous && previous.value.gt(ZERO)) {
+    if (index === null) {
+      if (point.value.lte(ZERO)) continue;
+      index = new Decimal(1);
+    } else if (previous && previous.value.gt(ZERO)) {
       index = index.times(point.value.minus(point.flow).div(previous.value));
-    } else if (point.value.gt(ZERO)) {
-      index = one;
     }
     if (peak === null || index.gt(peak)) {
       peak = index;
