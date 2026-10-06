@@ -65,7 +65,7 @@ export default function NutzungsbedingungenPage() {
 
       <LegalSection title="7. Quellcode und Lizenz">
         <p>
-          Der Quellcode steht unter der MIT-Lizenz zur Verfügung. Die Lizenz enthält einen eigenen Haftungs- und
+          Der Quellcode steht unter der MIT-Lizenz. Die Lizenz enthält einen eigenen Haftungs- und
           Gewährleistungsausschluss, der für die Nutzung des Quellcodes gilt.
         </p>
       </LegalSection>

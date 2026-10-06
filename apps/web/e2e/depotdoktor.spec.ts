@@ -109,6 +109,85 @@ test("Excel-Datei wird mit klarer Meldung abgelehnt", async ({ page }) => {
   await expect(page.getByTestId("report-section")).toHaveCount(0);
 });
 
+test("UTF-16-Export mit BOM wird gelesen", async ({ page }) => {
+  await page.goto("/projects/depotdoktor");
+  const text = readFileSync(tradeRepublicFixture, "utf8");
+  await page.getByTestId("file-input").setInputFiles({
+    name: "Transaktionen-UTF16.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text, "utf16le")]),
+  });
+  await expect(page.getByTestId("report-section")).toContainText("Trade Republic");
+  await expect(page.getByTestId("report-section")).toContainText("8 Buchungen");
+  await expect(page.getByTestId("performance-tab")).toContainText("+2,41 %");
+});
+
+test("Angesetzte Vorabpauschalen mindern den Veräußerungsgewinn", async ({ page }) => {
+  await page.goto("/projects/depotdoktor");
+  await page.getByTestId("file-input").setInputFiles({
+    name: "verkauf-vorjahr.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      [
+        "date;time;status;reference;description;assetType;type;isin;shares;price;amount;fee;tax;currency",
+        '2025-03-03;09:00:00;Executed;"E2E0001";"Testfonds Welt UCITS ETF";Security;Buy;IE00TEST0001;10;100,00;-1000,00;0,00;0,00;EUR',
+        '2026-05-04;09:00:00;Executed;"E2E0002";"Testfonds Welt UCITS ETF";Security;Sell;IE00TEST0001;10;120,00;1200,00;0,00;0,00;EUR',
+        "",
+      ].join("\n"),
+      "utf8",
+    ),
+  });
+  await expect(page.getByTestId("report-section")).toContainText("2 Buchungen");
+  await page.getByRole("tab", { name: "Steuer" }).click();
+  const sale = page.getByTestId("tax-sale");
+  const credit = sale.getByTestId("tax-sale-credit");
+  const realizedTile = page.getByTestId("tax-realized-gain");
+  await expect(sale).toHaveCount(1);
+  await expect(sale.getByTestId("tax-sale-gain")).toHaveText("200,00 €");
+  await expect(realizedTile).toContainText("Realisierte Gewinne 2026 (FIFO)");
+  await expect(realizedTile).toContainText("200,00 €");
+  await expect(credit).toHaveAccessibleName("Für diese Anteile in Vorjahren angesetzte Vorabpauschalen (€, optional)");
+  await expect(credit).toHaveAccessibleDescription(/^Summe der Beträge, die Ihre Bank .* InvStG\.$/);
+
+  await credit.fill("25,30");
+  await expect(sale.getByTestId("tax-sale-gain")).toHaveText("174,70 €");
+  await expect(sale).toContainText("angesetzte Vorabpauschalen 25,30 €");
+  await expect(realizedTile).toContainText("174,70 €");
+  await expect(page.getByRole("textbox", { name: "Kurs 01.01.2026" })).toHaveValue("120,00");
+
+  await page.getByTestId("tax-year").selectOption("2025");
+  await expect(page.getByRole("textbox", { name: "Kurs 01.01.2025" })).toHaveValue("100,00");
+  await expect(page.getByRole("textbox", { name: "Kurs 31.12.2025" })).toHaveValue("100,00");
+  await expect(page.getByTestId("tax-sale")).toHaveCount(0);
+
+  await page.getByTestId("tax-year").selectOption("2026");
+  await expect(credit).toHaveValue("25,30");
+  await expect(sale.getByTestId("tax-sale-gain")).toHaveText("174,70 €");
+
+  await credit.fill("abc");
+  await expect(sale).toContainText("Bitte einen Betrag ab 0");
+  await expect(credit).toHaveAttribute("aria-invalid", "true");
+  await expect(credit).toHaveAccessibleDescription(/Bitte einen Betrag ab 0 als Dezimalzahl eintragen\. Bis dahin wird nichts abgezogen\.$/);
+  await expect(sale.getByTestId("tax-sale-gain")).toHaveText("200,00 €");
+  await expect(realizedTile).toContainText("200,00 €");
+});
+
+test("Startseite und Rechtsseiten: KontoKlar extern verlinkt, NetzRadar in Arbeit, Quellcode nicht als einsehbar bezeichnet", async ({ page }) => {
+  await page.goto("/");
+  const kontoklar = page.getByTestId("kontoklar-link");
+  await expect(kontoklar).toHaveAttribute("href", "https://kontoklar-eight.vercel.app/projects/kontoklar");
+  await expect(kontoklar).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(kontoklar).toHaveAttribute("target", "_blank");
+  await expect(page.locator("main")).toContainText("NetzRadar ist in Arbeit");
+  await expect(page.locator("main a")).toHaveCount(2);
+  for (const route of ["/", "/impressum", "/datenschutz", "/nutzungsbedingungen"]) {
+    const response = await page.goto(route);
+    expect(response?.status()).toBe(200);
+    await expect(page.locator("body")).toContainText("MIT-Lizenz");
+    await expect(page.locator("body")).not.toContainText(/quelloffen|GitHub|Quellcode[^.]*zur Verfügung/i);
+  }
+});
+
 test("Rechtsseiten sind erreichbar und verlinkt", async ({ page }) => {
   await page.goto("/projects/depotdoktor");
   await page.getByRole("link", { name: "Nutzungsbedingungen" }).first().click();

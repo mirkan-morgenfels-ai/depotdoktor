@@ -1,11 +1,33 @@
 import { describe, expect, test } from "vitest";
+import type { Transaction } from "@portfolio/csv";
 import { d } from "../money";
 import { annualizedVolatility, sampleStdDev, volatilityFromPoints } from "../metrics/volatility";
 import { maxDrawdown, maxDrawdownFromPoints } from "../metrics/drawdown";
-import type { ValuationPoint } from "../metrics/ttwror";
+import { ttwror, type ValuationPoint } from "../metrics/ttwror";
+import { buildReport } from "../report";
 
 function point(date: string, value: string, flow = "0"): ValuationPoint {
   return { date, value: d(value), flow: d(flow) };
+}
+
+function tx(partial: Partial<Transaction> & Pick<Transaction, "date" | "type" | "amount">): Transaction {
+  return {
+    id: `${partial.date}-${partial.type}`,
+    broker: "scalable",
+    rowIndex: 0,
+    datetime: null,
+    isin: null,
+    name: null,
+    symbol: null,
+    assetClass: "unknown",
+    shares: null,
+    price: null,
+    fee: "0",
+    tax: "0",
+    currency: "EUR",
+    rawType: partial.type,
+    ...partial,
+  };
 }
 
 describe("Volatilität", () => {
@@ -69,5 +91,76 @@ describe("Max Drawdown", () => {
     expect(result.maxDrawdown.toFixed(3)).toBe("0.221");
     expect(result.peakDate).toBe("2026-01-01");
     expect(result.troughDate).toBe("2026-03-01");
+  });
+});
+
+describe("Max Drawdown nach Vollverkauf", () => {
+  const afterFullSale = [
+    point("2026-01-02", "1000", "1000"),
+    point("2026-02-02", "0", "-1100"),
+    point("2026-03-02", "450", "450"),
+    point("2026-04-01", "405"),
+  ];
+
+  test("Index läuft über die Phase ohne Bestand weiter: 1 → 1,1 → 1,1 → 1,1 × 405/450 = 0,99, Drawdown 10 %", () => {
+    const result = maxDrawdownFromPoints(afterFullSale);
+    expect(result.maxDrawdown.toFixed(4)).toBe("0.1000");
+    expect(result.peakDate).toBe("2026-02-02");
+    expect(result.troughDate).toBe("2026-04-01");
+  });
+
+  test("Index entspricht der TTWROR-Verkettung: 1,1 × 0,9 − 1 = −1 %", () => {
+    expect(ttwror(afterFullSale).total?.toFixed(4)).toBe("-0.0100");
+  });
+
+  test("Neukauf allein erzeugt keinen Drawdown (früher 1 − 1/1,1 = 9,09 % durch Rücksetzen des Index)", () => {
+    const result = maxDrawdownFromPoints(afterFullSale.slice(0, 3));
+    expect(result.maxDrawdown.toFixed(4)).toBe("0.0000");
+  });
+
+  test("Depotwert 0 nach Vollverkauf zählt nicht als −100 %: Verkauf mit 10 % Verlust, danach nur Ausschüttung", () => {
+    const result = maxDrawdownFromPoints([
+      point("2026-01-02", "1000", "1000"),
+      point("2026-02-02", "0", "-900"),
+      point("2026-03-02", "0", "-5"),
+    ]);
+    expect(result.maxDrawdown.toFixed(4)).toBe("0.1000");
+    expect(result.troughDate).toBe("2026-02-02");
+  });
+
+  test("Verlust vor dem Vollverkauf bleibt erhalten: 0,8 × 400/500 = 0,64, Drawdown 36 % statt 20 %", () => {
+    const result = maxDrawdownFromPoints([
+      point("2026-01-02", "1000", "1000"),
+      point("2026-02-02", "0", "-800"),
+      point("2026-03-02", "500", "500"),
+      point("2026-04-01", "400"),
+    ]);
+    expect(result.maxDrawdown.toFixed(4)).toBe("0.3600");
+    expect(result.peakDate).toBe("2026-01-02");
+    expect(result.troughDate).toBe("2026-04-01");
+  });
+
+  test("Bewertungspunkte ohne Bestand vor dem ersten Kauf werden übersprungen", () => {
+    const result = maxDrawdownFromPoints([point("2026-01-01", "0"), point("2026-01-02", "1000", "1000"), point("2026-01-03", "900")]);
+    expect(result.maxDrawdown.toFixed(4)).toBe("0.1000");
+    expect(result.peakDate).toBe("2026-01-02");
+  });
+
+  test("über buildReport: Kauf 10 @ 100, Verkauf 10 @ 110, Kauf 5 @ 90, Kauf 1 @ 81 ergibt 10 %", () => {
+    const etf = { isin: "IE00TEST0001", name: "ETF" };
+    const report = buildReport([
+      tx({ id: "a", date: "2026-01-02", type: "buy", amount: "-1000", shares: "10", price: "100", ...etf }),
+      tx({ id: "b", date: "2026-02-02", type: "sell", amount: "1100", shares: "10", price: "110", ...etf }),
+      tx({ id: "c", date: "2026-03-02", type: "buy", amount: "-450", shares: "5", price: "90", ...etf }),
+      tx({ id: "d", date: "2026-04-01", type: "buy", amount: "-81", shares: "1", price: "81", ...etf }),
+    ]);
+    expect(report.portfolio.points.map((p) => `${p.value.toFixed(2)} ${p.flow.toFixed(2)}`)).toEqual([
+      "1000.00 1000.00",
+      "0.00 -1100.00",
+      "450.00 450.00",
+      "486.00 81.00",
+    ]);
+    expect(report.drawdown.maxDrawdown.toFixed(4)).toBe("0.1000");
+    expect(report.ttwror.total?.toFixed(4)).toBe("-0.0100");
   });
 });
