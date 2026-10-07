@@ -1,50 +1,56 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Card, CardTitle } from "@portfolio/ui";
+import { pageMetadata } from "@/lib/metadata";
+import { PROJECTS } from "@/lib/site";
 
-const KONTOKLAR_URL = "https://kontoklar-eight.vercel.app/projects/kontoklar";
+const LINK_CLASS = "text-sm text-green underline underline-offset-4 hover:text-gold-deep";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Projekte · Mirkan Deniz Günkaya",
+  absolute: true,
+  description: "Drei Portfolio-Projekte zu Finanzdaten, Textklassifikation und Netzwerkanalyse.",
+  path: "/",
+});
 
 export default function HomePage() {
   return (
     <div className="space-y-10">
-      <section>
-        <h1 className="font-serif text-4xl">Projekte</h1>
-        <p className="mt-3 max-w-2xl text-muted">
-          Drei Werkzeuge rund um Finanzdaten, Textklassifikation und Netzwerkanalyse, geschrieben in TypeScript und Python.
-          DepotDoktor und KontoKlar sind online nutzbar, NetzRadar ist in Arbeit. Der Quellcode steht unter der MIT-Lizenz.
+      <section className="max-w-3xl">
+        <p className="text-xs uppercase tracking-widest text-gold-deep">Portfolio</p>
+        <h1 className="mt-2 font-serif text-4xl">Projekte</h1>
+        <p className="mt-3 text-muted">
+          Drei Projekte zu Finanzdaten, Textklassifikation und Netzwerkanalyse. Jedes läuft unter eigener Adresse, der
+          Quellcode liegt öffentlich auf GitHub (MIT-Lizenz).
         </p>
       </section>
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card>
-          <CardTitle>DepotDoktor</CardTitle>
-          <p className="text-sm text-muted">
-            Depot-Steuer- und Performance-Analyzer für Broker-CSV-Exporte. Rechnet vollständig im Browser.
-          </p>
-          <Link href="/projects/depotdoktor" className="mt-4 inline-block text-sm text-green underline">
-            Zum Projekt
-          </Link>
-        </Card>
-        <Card>
-          <CardTitle>KontoKlar</CardTitle>
-          <p className="text-sm text-muted">
-            Kontoauszug-Kategorisierer mit Haushaltsanalyse: Bank-CSV rein, Dashboard raus. Läuft unter eigener Adresse.
-          </p>
-          <a
-            href={KONTOKLAR_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-4 inline-block text-sm text-green underline"
-            data-testid="kontoklar-link"
-          >
-            Zum Projekt<span className="sr-only"> KontoKlar, externe Seite, öffnet in neuem Tab</span>
-          </a>
-        </Card>
-        <Card>
-          <CardTitle>NetzRadar</CardTitle>
-          <p className="text-sm text-muted">
-            Anomalieanalyse in Transaktionsnetzen mit Graph Neural Network. In Arbeit, noch nicht veröffentlicht.
-          </p>
-        </Card>
-      </div>
+      <ul className="grid gap-6 md:grid-cols-3">
+        {PROJECTS.map((project) => (
+          <li key={project.slug} className="flex" data-testid={`project-${project.slug}`}>
+            <Card className="flex w-full flex-col">
+              <p className="text-xs uppercase tracking-widest text-gold-deep">{project.kicker}</p>
+              <CardTitle className="mt-1">{project.title}</CardTitle>
+              <p className="flex-1 text-sm text-muted">{project.description}</p>
+              <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+                {project.external ? (
+                  <a href={project.href} rel="noopener noreferrer" className={LINK_CLASS}>
+                    Zum Projekt<span className="sr-only"> {project.title}</span>{" "}
+                    <span className="text-muted">(externe Seite)</span>
+                  </a>
+                ) : (
+                  <Link href={project.href} className={LINK_CLASS}>
+                    Zum Projekt<span className="sr-only"> {project.title}</span>
+                  </Link>
+                )}
+                <a href={project.repo} rel="noopener noreferrer" className={LINK_CLASS}>
+                  Quellcode<span className="sr-only"> von {project.title} auf GitHub</span>{" "}
+                  <span className="text-muted">(externe Seite)</span>
+                </a>
+              </div>
+            </Card>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

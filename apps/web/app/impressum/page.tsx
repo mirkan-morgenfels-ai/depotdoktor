@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { OPERATOR } from "@portfolio/legal";
-import { LegalPage, LegalSection } from "@/components/LegalPage";
+import { ExternalLink, LegalPage, LegalSection } from "@/components/LegalPage";
+import { pageMetadata } from "@/lib/metadata";
+import { LICENSE_URL, REPO_URL } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Impressum" };
+export const metadata: Metadata = pageMetadata({
+  title: "Impressum",
+  description: "Impressum von DepotDoktor, einem privaten, nicht-kommerziellen Portfolio-Projekt von Mirkan Deniz Günkaya.",
+  path: "/impressum",
+});
 
 export default function ImpressumPage() {
   return (
@@ -46,8 +52,10 @@ export default function ImpressumPage() {
 
       <LegalSection title="Urheberrecht und Lizenz">
         <p>
-          Der Quellcode der Projekte steht unter der MIT-Lizenz. Texte und Gestaltung dieser Seite
-          unterliegen dem deutschen Urheberrecht. Genannte Marken und Produktnamen (etwa Trade Republic, Scalable Capital)
+          Der Quellcode ist öffentlich unter{" "}
+          <ExternalLink href={REPO_URL}>github.com/mirkan-morgenfels-ai/depotdoktor</ExternalLink> verfügbar (
+          <ExternalLink href={LICENSE_URL}>MIT-Lizenz</ExternalLink>). Texte und Gestaltung dieser Seite unterliegen dem
+          deutschen Urheberrecht. Genannte Marken und Produktnamen (etwa Trade Republic, Scalable Capital)
           gehören ihren jeweiligen Inhabern; es besteht keine Verbindung zu diesen Unternehmen.
         </p>
       </LegalSection>

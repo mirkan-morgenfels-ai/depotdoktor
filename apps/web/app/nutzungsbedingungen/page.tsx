@@ -1,8 +1,15 @@
 import type { Metadata } from "next";
 import { OPERATOR } from "@portfolio/legal";
-import { LegalPage, LegalSection } from "@/components/LegalPage";
+import { ExternalLink, LegalPage, LegalSection } from "@/components/LegalPage";
+import { pageMetadata } from "@/lib/metadata";
+import { LICENSE_URL, REPO_URL } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Nutzungsbedingungen" };
+export const metadata: Metadata = pageMetadata({
+  title: "Nutzungsbedingungen",
+  description:
+    "Nutzungsbedingungen von DepotDoktor: kostenlose Nutzung, keine Anlage- oder Steuerberatung, Schätzungen ohne Gewähr.",
+  path: "/nutzungsbedingungen",
+});
 
 export default function NutzungsbedingungenPage() {
   return (
@@ -65,7 +72,9 @@ export default function NutzungsbedingungenPage() {
 
       <LegalSection title="7. Quellcode und Lizenz">
         <p>
-          Der Quellcode steht unter der MIT-Lizenz. Die Lizenz enthält einen eigenen Haftungs- und
+          Der Quellcode ist öffentlich unter{" "}
+          <ExternalLink href={REPO_URL}>github.com/mirkan-morgenfels-ai/depotdoktor</ExternalLink> verfügbar (
+          <ExternalLink href={LICENSE_URL}>MIT-Lizenz</ExternalLink>). Die Lizenz enthält einen eigenen Haftungs- und
           Gewährleistungsausschluss, der für die Nutzung des Quellcodes gilt.
         </p>
       </LegalSection>
