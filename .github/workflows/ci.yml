@@ -5,9 +5,17 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v6
@@ -24,7 +32,6 @@ jobs:
       - run: pnpm test:e2e
         env:
           CI: "true"
-          E2E_SERVER: start
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

@@ -9,14 +9,18 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
   },
   "peerDependencies": {
     "react": "^19"
   },
   "devDependencies": {
+    "@eslint/js": "^9",
     "@types/react": "^19.2.18",
-    "react": "^19.2.8",
-    "typescript": "^5.9.3"
+    "eslint": "^9",
+    "react": "^19.3.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8"
   }
 }
