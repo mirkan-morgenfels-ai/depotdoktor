@@ -32,7 +32,7 @@ export function ExportBar({ onExportPdf, onExportCsv }: ExportBarProps) {
       <Button variant="secondary" onClick={onExportCsv} data-testid="export-csv">
         Transaktionen als CSV
       </Button>
-      <span className="text-xs text-muted">Beide Exporte entstehen im Browser; es wird nichts übertragen.</span>
+      <span className="text-xs text-muted">Beide Exporte entstehen im Browser; Ihre Daten werden nicht übertragen.</span>
       {error ? (
         <span role="alert" className="text-xs text-bordeaux">
           {error}

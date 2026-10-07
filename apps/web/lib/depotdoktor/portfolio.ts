@@ -42,6 +42,11 @@ export function positionKey(transaction: Pick<Transaction, "isin" | "name">): st
   return transaction.isin ?? `name:${transaction.name ?? "unbekannt"}`;
 }
 
+export function isDepotBooking(transaction: Pick<Transaction, "type" | "isin">): boolean {
+  if (transaction.type === "buy" || transaction.type === "sell" || transaction.type === "dividend") return true;
+  return (transaction.type === "fee" || transaction.type === "tax" || transaction.type === "other") && transaction.isin !== null;
+}
+
 interface MutablePosition {
   key: string;
   isin: string | null;
@@ -71,13 +76,16 @@ export function buildPortfolio(transactions: readonly Transaction[]): PortfolioS
     endValue: ZERO,
   };
 
+  let firstBuyDate: string | null = null;
   let index = 0;
   while (index < sorted.length) {
     const date = sorted[index]!.date;
     let flow = ZERO;
+    let depotBooking = false;
     while (index < sorted.length && sorted[index]!.date === date) {
       const tx = sorted[index]!;
       index += 1;
+      if (isDepotBooking(tx)) depotBooking = true;
       const amount = d(tx.amount);
       const fee = d(tx.fee);
       const tax = d(tx.tax);
@@ -95,6 +103,7 @@ export function buildPortfolio(transactions: readonly Transaction[]): PortfolioS
           flow = flow.plus(amount.abs());
           totals.invested = totals.invested.plus(amount.abs());
           totals.fees = totals.fees.plus(fee);
+          if (firstBuyDate === null) firstBuyDate = tx.date;
           break;
         }
         case "sell": {
@@ -125,12 +134,12 @@ export function buildPortfolio(transactions: readonly Transaction[]): PortfolioS
           break;
         }
         case "fee": {
-          flow = flow.plus(amount.abs());
+          if (tx.isin !== null) flow = flow.plus(amount.abs());
           totals.fees = totals.fees.plus(amount.abs());
           break;
         }
         case "tax": {
-          flow = flow.plus(amount.abs());
+          if (tx.isin !== null) flow = flow.plus(amount.abs());
           totals.taxes = totals.taxes.plus(amount.abs());
           break;
         }
@@ -148,12 +157,13 @@ export function buildPortfolio(transactions: readonly Transaction[]): PortfolioS
       }
     }
 
+    if (!depotBooking) continue;
     const value = valueOf(positions);
     points.push({ date, value, flow });
     flowsByDate.push({ date, flow });
   }
 
-  const firstDate = points[0]?.date ?? null;
+  const firstDate = firstBuyDate ?? points[0]?.date ?? null;
   const lastDate = points[points.length - 1]?.date ?? null;
   const endValue = points[points.length - 1]?.value ?? ZERO;
   totals.endValue = endValue;

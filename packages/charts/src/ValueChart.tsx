@@ -4,6 +4,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { AXIS_TICK, CHART_COLORS } from "./theme";
 
 export interface ValuePoint {
+  time: number;
   date: string;
   label: string;
   value: number;
@@ -16,6 +17,20 @@ export interface ValueChartProps {
   height?: number;
 }
 
+function pad(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+export function formatDayMonth(time: number): string {
+  const date = new Date(time);
+  return `${pad(date.getUTCDate())}.${pad(date.getUTCMonth() + 1)}.`;
+}
+
+export function formatFullDate(time: number): string {
+  const date = new Date(time);
+  return `${pad(date.getUTCDate())}.${pad(date.getUTCMonth() + 1)}.${date.getUTCFullYear()}`;
+}
+
 export function ValueChart({ points, formatValue, height = 260 }: ValueChartProps) {
   if (points.length === 0) return null;
   return (
@@ -23,7 +38,17 @@ export function ValueChart({ points, formatValue, height = 260 }: ValueChartProp
       <ResponsiveContainer>
         <LineChart data={points} margin={{ top: 12, right: 16, bottom: 4, left: 8 }}>
           <CartesianGrid stroke={CHART_COLORS.line} vertical={false} />
-          <XAxis dataKey="label" tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: CHART_COLORS.line }} minTickGap={24} />
+          <XAxis
+            dataKey="time"
+            type="number"
+            scale="time"
+            domain={["dataMin", "dataMax"]}
+            tick={AXIS_TICK}
+            tickLine={false}
+            axisLine={{ stroke: CHART_COLORS.line }}
+            tickFormatter={(v: number) => formatDayMonth(v)}
+            minTickGap={24}
+          />
           <YAxis
             tick={AXIS_TICK}
             tickLine={false}
@@ -35,10 +60,11 @@ export function ValueChart({ points, formatValue, height = 260 }: ValueChartProp
             cursor={{ stroke: CHART_COLORS.muted, strokeDasharray: "3 3" }}
             contentStyle={{ borderColor: CHART_COLORS.line, borderRadius: 6, fontSize: 12 }}
             labelStyle={{ color: CHART_COLORS.muted }}
+            labelFormatter={(v) => formatFullDate(Number(v))}
             formatter={(value) => [formatValue(Number(value)), "Depotwert"]}
           />
           <Line
-            type="linear"
+            type="stepAfter"
             dataKey="value"
             stroke={CHART_COLORS.green}
             strokeWidth={2}

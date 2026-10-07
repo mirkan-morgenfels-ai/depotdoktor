@@ -6,6 +6,7 @@ export interface Lot {
   shares: Decimal;
   costPerShare: Decimal;
   taxedVorabpauschalePerShare: Decimal;
+  distributionsPerShareInYear: Decimal;
 }
 
 export interface LotConsumption {
@@ -37,6 +38,7 @@ export function createLot(id: string, date: string, shares: Decimal, totalCost: 
     shares,
     costPerShare: shares.gt(ZERO) ? totalCost.div(shares) : ZERO,
     taxedVorabpauschalePerShare: ZERO,
+    distributionsPerShareInYear: ZERO,
   };
 }
 

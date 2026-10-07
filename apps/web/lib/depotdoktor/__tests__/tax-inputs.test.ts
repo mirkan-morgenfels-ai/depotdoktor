@@ -45,23 +45,24 @@ function settingsFor(inputs: TaxInputs, year: number, list: readonly Transaction
 
 const entered2026 = [price(2026, "yearStartPrice", "105,00"), price(2026, "yearEndPrice", "125,00")];
 const enteredBothYears = [...entered2026, price(2025, "yearEndPrice", "110,00")];
+const entered2025Start = price(2025, "yearStartPrice", "100,00");
 
 describe("Kurse je Steuerjahr und Position, Fondstyp je Position", () => {
-  test("Vorbelegung je Jahr ohne Eingabe: 2025 letzter Kurs bis Ende 2025 = 100,00, 2026 letzter Kurs bis Ende 2026 = 110,00", () => {
-    expect(settingsFor(EMPTY_TAX_INPUTS, 2025)).toEqual([{ fundType: "equity", yearStartPrice: "100,00", yearEndPrice: "100,00" }]);
-    expect(settingsFor(EMPTY_TAX_INPUTS, 2026)).toEqual([{ fundType: "equity", yearStartPrice: "110,00", yearEndPrice: "110,00" }]);
+  test("Vorbelegung je Jahr ohne Eingabe: 01.01. aus dem Vorjahr (2025 keiner, 2026 = 100,00), 31.12. letzter Kurs bis Jahresende (2025 = 100,00, 2026 = 110,00)", () => {
+    expect(settingsFor(EMPTY_TAX_INPUTS, 2025)).toEqual([{ fundType: "equity", yearStartPrice: "", yearEndPrice: "100,00" }]);
+    expect(settingsFor(EMPTY_TAX_INPUTS, 2026)).toEqual([{ fundType: "equity", yearStartPrice: "100,00", yearEndPrice: "110,00" }]);
   });
 
   test("Kurse für 2026 ändern die Vorbelegung 2025 nicht", () => {
     const inputs = apply(...entered2026);
     expect(settingsFor(inputs, 2026)).toEqual([{ fundType: "equity", yearStartPrice: "105,00", yearEndPrice: "125,00" }]);
-    expect(settingsFor(inputs, 2025)).toEqual([{ fundType: "equity", yearStartPrice: "100,00", yearEndPrice: "100,00" }]);
+    expect(settingsFor(inputs, 2025)).toEqual([{ fundType: "equity", yearStartPrice: "", yearEndPrice: "100,00" }]);
     expect(inputs.prices[2025]).toBeUndefined();
   });
 
   test("Jahreswechsel behält die Eingaben beider Jahre; ein nicht eingegebenes Feld bleibt bei der Vorbelegung seines Jahres", () => {
     const inputs = apply(...enteredBothYears);
-    expect(settingsFor(inputs, 2025)).toEqual([{ fundType: "equity", yearStartPrice: "100,00", yearEndPrice: "110,00" }]);
+    expect(settingsFor(inputs, 2025)).toEqual([{ fundType: "equity", yearStartPrice: "", yearEndPrice: "110,00" }]);
     expect(settingsFor(inputs, 2026)).toEqual([{ fundType: "equity", yearStartPrice: "105,00", yearEndPrice: "125,00" }]);
     expect(settingsFor(apply(...enteredBothYears, price(2025, "yearEndPrice", "112,00")), 2026)).toEqual(settingsFor(inputs, 2026));
   });
@@ -79,28 +80,31 @@ describe("Kurse je Steuerjahr und Position, Fondstyp je Position", () => {
   });
 
   test("Steuer 2025 aus den Kursen 2025: Kauf im März, 10 × 100 × 2,53 % × 0,7 × 10/12 = 14,7583; Zuwachs 10 × 10 = 100 deckelt nicht; × 0,7 = 10,3308; × 26,375 % = 2,7248", () => {
-    const summary = buildTaxSummary(transactions, 2025, apply(...enteredBothYears));
+    const summary = buildTaxSummary(transactions, 2025, apply(...enteredBothYears, entered2025Start));
     expect(summary.rows[0]!.estimate!.parts.map((p) => `${p.label} ${p.monthsBeforeAcquisition}`)).toEqual(["Kauf 2025-03-03 2"]);
     expect(summary.totals.vorabpauschale.toFixed(4)).toBe("14.7583");
     expect(summary.totals.taxable.toFixed(4)).toBe("10.3308");
     expect(summary.totals.tax.toFixed(4)).toBe("2.7248");
   });
 
-  test("Vorbelegte Kurse ergeben in beiden Jahren 0 €, weil Kurs 01.01. und 31.12. gleich sind", () => {
-    for (const year of [2025, 2026]) {
-      expect(buildTaxSummary(transactions, year, EMPTY_TAX_INPUTS).totals.vorabpauschale.toFixed(2)).toBe("0.00");
-    }
+  test("Vorbelegung ohne Eingabe: 2025 fehlt der Kurs 01.01. (keine Schätzung), 2026 vorläufig 15 × 100 × 3,2 % × 0,7 = 33,60 €", () => {
+    const summary2025 = buildTaxSummary(transactions, 2025, EMPTY_TAX_INPUTS);
+    expect(summary2025.rows[0]?.estimate).toBeNull();
+    expect(summary2025.totals.status).toBe("missing");
+    const summary2026 = buildTaxSummary(transactions, 2026, EMPTY_TAX_INPUTS);
+    expect(summary2026.totals.status).toBe("provisional");
+    expect(summary2026.totals.vorabpauschale.toFixed(2)).toBe("33.60");
   });
 
   test("Fondstyp gilt für alle Jahre und schreibt die Kursvorbelegung keines Jahres fest", () => {
     const inputs = apply({ type: "setFundType", positionKey: KEY, fundType: "mixed" });
-    expect(settingsFor(inputs, 2025)).toEqual([{ fundType: "mixed", yearStartPrice: "100,00", yearEndPrice: "100,00" }]);
-    expect(settingsFor(inputs, 2026)).toEqual([{ fundType: "mixed", yearStartPrice: "110,00", yearEndPrice: "110,00" }]);
+    expect(settingsFor(inputs, 2025)).toEqual([{ fundType: "mixed", yearStartPrice: "", yearEndPrice: "100,00" }]);
+    expect(settingsFor(inputs, 2026)).toEqual([{ fundType: "mixed", yearStartPrice: "100,00", yearEndPrice: "110,00" }]);
     expect(inputs.prices).toEqual({});
   });
 
   test("Mischfonds mit Kursen beider Jahre: 2026 35,28 × 0,85 = 29,988, Steuer 7,909335; 2025 14,7583 × 0,85 = 12,5446, Steuer 3,3086", () => {
-    const inputs = apply(...enteredBothYears, { type: "setFundType", positionKey: KEY, fundType: "mixed" });
+    const inputs = apply(...enteredBothYears, entered2025Start, { type: "setFundType", positionKey: KEY, fundType: "mixed" });
     const summary2026 = buildTaxSummary(transactions, 2026, inputs);
     expect(summary2026.totals.vorabpauschale.toFixed(2)).toBe("35.28");
     expect(summary2026.totals.taxable.toFixed(3)).toBe("29.988");
@@ -117,7 +121,8 @@ describe("Kurse je Steuerjahr und Position, Fondstyp je Position", () => {
     const row2026 = buildTaxSummary(transactions, 2026, inputs).rows[0]!;
     expect(row2026.settings).toEqual({ fundType: "equity", yearStartPrice: "", yearEndPrice: "110,00" });
     expect(row2026.estimate).toBeNull();
-    expect(settingsFor(inputs, 2025)).toEqual([{ fundType: "equity", yearStartPrice: "100,00", yearEndPrice: "100,00" }]);
+    expect(row2026.prefilled).toEqual({ yearStartPrice: false, yearEndPrice: true });
+    expect(settingsFor(inputs, 2025)).toEqual([{ fundType: "equity", yearStartPrice: "", yearEndPrice: "100,00" }]);
   });
 
   test("Eingaben betreffen nur die eigene Position", () => {
@@ -142,7 +147,7 @@ describe("Kurse je Steuerjahr und Position, Fondstyp je Position", () => {
   });
 
   test("PDF nutzt die Kurse und Summen des gewählten Jahres", () => {
-    const inputs = apply(...enteredBothYears);
+    const inputs = apply(...enteredBothYears, entered2025Start);
     const meta = { fileName: "test.csv", broker: "scalable" as const, transactionCount: transactions.length, generatedAt: new Date(Date.UTC(2026, 9, 7)) };
     const report = buildReport(transactions);
     const pdf2025 = buildReportPdfData(report, buildTaxSummary(transactions, 2025, inputs), meta);

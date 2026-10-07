@@ -8,7 +8,7 @@ export const FUND_TYPE_LABELS: Record<FundType, string> = {
   realEstate: "Immobilienfonds (Teilfreistellung 60 %)",
   realEstateForeign: "Auslands-Immobilienfonds (Teilfreistellung 80 %)",
   other: "Sonstiger Fonds (keine Teilfreistellung)",
-  none: "Kein Fonds, z. B. Einzelaktie oder Anleihe (keine Vorabpauschale)",
+  none: "Kein Fonds (Aktie, Anleihe)",
 };
 
 export const TEILFREISTELLUNG: Record<FundType, Decimal> = {

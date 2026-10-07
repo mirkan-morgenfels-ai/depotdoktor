@@ -7,11 +7,22 @@ const sample: ReportPdfData = {
   title: "Depot-Report",
   subtitle: "Performance, Allokation und geschätzte Vorabpauschale 2026",
   generatedAt: "03.09.2026",
-  sourceLine: "test.csv · Trade Republic · 8 Buchungen",
+  sourceLine: "test.csv · Scalable Capital · 6 Buchungen · 1 übersprungen · Zeitraum 06.01.2026 bis 20.06.2026",
   metrics: [
-    { label: "TTWROR", value: "+2,41 %", hint: "06.01.2026 bis 02.08.2026" },
-    { label: "IRR (geldgewichtet)", value: "+5,17 % p. a." },
+    { label: "TTWROR (kumuliert)", value: "+2,40 %", hint: "nicht annualisiert, Zeitraum unter 1 Jahr" },
+    { label: "IRR (geldgewichtet, p. a.)", value: "+5,51 %", hint: "bewertet zum letzten Kurs im Export, Stand 20.06.2026" },
+    { label: "Volatilität", value: "2,32 % p. a." },
+    { label: "Max Drawdown", value: "-0,02 %" },
+    { label: "Depotwert (letzter Kurs)", value: "8.720,00 €" },
+    { label: "Investiert (Käufe)", value: "9.002,00 €" },
+    { label: "Verkaufserlöse", value: "479,00 €" },
+    { label: "Dividenden netto", value: "18,50 €" },
+    { label: "Gebühren", value: "3,00 €" },
+    { label: "Abgeführte Steuern", value: "6,50 €" },
+    { label: "Einzahlungen Konto", value: "10.000,00 €" },
+    { label: "Zinsen Konto", value: "3,21 €" },
   ],
+  metricsNote: "Die TTWROR misst die Wertentwicklung unabhängig davon, wann Sie Geld investiert haben.",
   valueTable: {
     title: "Wertverlauf an den Buchungstagen",
     columns: ["Datum", "Depotwert", "Zahlungsstrom", "Periodenrendite"],
@@ -36,8 +47,9 @@ const sample: ReportPdfData = {
     },
   ],
   taxMethod: ["Basisertrag = Wert am Jahresanfang × Basiszins × 0,7."],
-  notes: ["Bewertung ohne Tageskurse."],
+  notes: ["Bewertung ohne Tageskurse.", "Einlesen: Zeile 7 übersprungen (Status Pending)."],
   disclaimer: "Keine Anlage- oder Steuerberatung. Alle Angaben ohne Gewähr.",
+  footerLine: "Erstellt mit DepotDoktor · depotdoktor.vercel.app/projects/depotdoktor",
 };
 
 describe("PDF-Report", () => {
@@ -56,5 +68,21 @@ describe("PDF-Report", () => {
     expect(result.text).toContain("IE00TEST0001");
     const disclaimerCount = result.text.split("Keine Anlage- oder Steuerberatung").length - 1;
     expect(disclaimerCount).toBe(3);
+    const footerCount = result.text.split("Erstellt mit DepotDoktor · depotdoktor.vercel.app/projects/depotdoktor").length - 1;
+    expect(footerCount).toBe(3);
+  });
+
+  test("zeigt alle zwölf Kennzahlen, den Erklärsatz, übersprungene Zeilen und Hinweise zum Einlesen", async () => {
+    const parser = new PDFParse({ data: Buffer.from(await renderReportPdfBuffer(sample)) });
+    const result = await parser.getText();
+    await parser.destroy();
+    const text = result.text.replace(/\s+/g, " ");
+    for (const metric of sample.metrics) {
+      expect(text).toContain(metric.label.toUpperCase());
+      expect(text).toContain(metric.value);
+    }
+    expect(text).toContain("unabhängig davon, wann Sie Geld investiert haben");
+    expect(text).toContain("1 übersprungen");
+    expect(text).toContain("Einlesen: Zeile 7 übersprungen (Status Pending).");
   });
 });

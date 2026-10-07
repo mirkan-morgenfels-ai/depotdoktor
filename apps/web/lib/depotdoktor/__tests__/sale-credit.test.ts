@@ -138,15 +138,15 @@ describe("Angesetzte Vorabpauschalen beim Verkauf (§ 19 Abs. 1 Satz 3 und 4 Inv
     expect(data.taxSummary.find((m) => m.label.startsWith("Realisierte Gewinne"))?.value).toBe("237,66 €");
   });
 
-  test("Eingabe ändert die Positionseinstellungen nicht: 2025 bleibt bei Kurs 100,00, 2026 bei 120,00", () => {
+  test("Eingabe ändert die Positionseinstellungen nicht: 2025 bleibt bei der Vorbelegung leer / 100,00, 2026 bei 100,00 / 120,00", () => {
     const entered = credits("12,34");
     const [position2025] = buildTaxPositions(transactions, 2025);
     const row2025 = buildTaxSummary(transactions, 2025, EMPTY_TAX_INPUTS, entered).rows[0]!;
     expect(row2025.settings).toEqual(defaultPositionSettings(position2025!));
-    expect(row2025.settings).toEqual({ fundType: "equity", yearStartPrice: "100,00", yearEndPrice: "100,00" });
+    expect(row2025.settings).toEqual({ fundType: "equity", yearStartPrice: "", yearEndPrice: "100,00" });
     expect(row2025.sales).toHaveLength(0);
     const row2026 = buildTaxSummary(transactions, 2026, EMPTY_TAX_INPUTS, entered).rows[0]!;
-    expect(row2026.settings).toEqual({ fundType: "equity", yearStartPrice: "120,00", yearEndPrice: "120,00" });
+    expect(row2026.settings).toEqual({ fundType: "equity", yearStartPrice: "100,00", yearEndPrice: "120,00" });
     expect(row2026.sales[0]?.gain.toFixed(2)).toBe("237.66");
   });
 });

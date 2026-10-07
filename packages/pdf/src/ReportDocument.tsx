@@ -25,12 +25,14 @@ const styles = StyleSheet.create({
   metricLabel: { fontSize: 7, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 0.5 },
   metricValue: { fontFamily: "Times-Roman", fontSize: 14, marginTop: 2 },
   metricHint: { fontSize: 7, color: COLORS.muted, marginTop: 2 },
+  metricsNote: { fontSize: 8, color: COLORS.muted, marginTop: 2, marginBottom: 4 },
   tableTitle: { fontSize: 10, marginTop: 10, marginBottom: 4, fontFamily: "Helvetica-Bold" },
   tableHeader: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: COLORS.ink, paddingBottom: 3, marginBottom: 2 },
   tableRow: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: COLORS.line, paddingVertical: 3 },
   tableRowEmphasis: { flexDirection: "row", borderTopWidth: 1, borderTopColor: COLORS.ink, paddingVertical: 3, fontFamily: "Helvetica-Bold" },
   headerCell: { fontSize: 7, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 0.5 },
   cell: { fontSize: 9 },
+  spacedCell: { paddingLeft: 4 },
   footnote: { fontSize: 7.5, color: COLORS.muted, marginTop: 4 },
   bullet: { flexDirection: "row", marginBottom: 3 },
   bulletMark: { width: 10, color: COLORS.gold },
@@ -47,6 +49,7 @@ const styles = StyleSheet.create({
     paddingTop: 6,
   },
   pageNumber: { position: "absolute", right: 48, bottom: 14, fontSize: 7, color: COLORS.muted },
+  footerLine: { position: "absolute", left: 48, bottom: 14, fontSize: 7, color: COLORS.muted },
 });
 
 function Metrics({ items }: { items: ReportMetric[] }) {
@@ -74,7 +77,7 @@ function Table({ table }: { table: ReportTable }) {
       <Text style={styles.tableTitle}>{table.title}</Text>
       <View style={styles.tableHeader} minPresenceAhead={40}>
         {table.columns.map((c, i) => (
-          <Text key={c} style={[styles.headerCell, { width: `${widths[i]! * 100}%`, textAlign: alignOf(i) }]}>
+          <Text key={c} style={[styles.headerCell, i > 0 ? styles.spacedCell : {}, { width: `${widths[i]! * 100}%`, textAlign: alignOf(i) }]}>
             {c}
           </Text>
         ))}
@@ -82,7 +85,7 @@ function Table({ table }: { table: ReportTable }) {
       {table.rows.map((row, r) => (
         <View key={r} style={row.emphasis ? styles.tableRowEmphasis : styles.tableRow} wrap={false}>
           {row.cells.map((cell, i) => (
-            <Text key={i} style={[styles.cell, { width: `${widths[i]! * 100}%`, textAlign: alignOf(i) }]}>
+            <Text key={i} style={[styles.cell, i > 0 ? styles.spacedCell : {}, { width: `${widths[i]! * 100}%`, textAlign: alignOf(i) }]}>
               {cell}
             </Text>
           ))}
@@ -106,11 +109,14 @@ function Bullets({ items }: { items: string[] }) {
   );
 }
 
-function Footer({ disclaimer }: { disclaimer: string }) {
+function Footer({ disclaimer, footerLine }: { disclaimer: string; footerLine: string }) {
   return (
     <>
       <Text style={styles.footer} fixed>
         {disclaimer}
+      </Text>
+      <Text style={styles.footerLine} fixed>
+        {footerLine}
       </Text>
       <Text style={styles.pageNumber} fixed render={({ pageNumber, totalPages }) => `Seite ${pageNumber} von ${totalPages}`} />
     </>
@@ -130,6 +136,7 @@ export function ReportDocument({ data }: { data: ReportPdfData }) {
 
         <Text style={styles.h2}>Performance</Text>
         <Metrics items={data.metrics} />
+        <Text style={styles.metricsNote}>{data.metricsNote}</Text>
         <Table table={data.valueTable} />
 
         <Text style={styles.h2} break>
@@ -157,7 +164,7 @@ export function ReportDocument({ data }: { data: ReportPdfData }) {
           </View>
         ) : null}
 
-        <Footer disclaimer={data.disclaimer} />
+        <Footer disclaimer={data.disclaimer} footerLine={data.footerLine} />
       </Page>
     </Document>
   );

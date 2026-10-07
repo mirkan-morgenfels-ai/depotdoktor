@@ -1,18 +1,23 @@
-import type { BrokerId } from "@portfolio/csv";
+import type { BrokerId, ParseWarning } from "@portfolio/csv";
 import type { ReportPdfData, ReportTable } from "@portfolio/pdf";
 import { DISCLAIMER_LONG } from "@portfolio/legal";
+import { projectDisplayUrl } from "@/lib/site";
 import type { PerformanceReport } from "./report";
-import type { TaxSummary } from "./tax/summary";
-import { TAX_METHOD_NOTES } from "./tax/summary";
+import type { TaxRow, TaxSummary } from "./tax/summary";
+import { distributionText, MISSING_PRICES_LABEL, noHoldingText, PROVISIONAL_PRICE_LABEL, TAX_METHOD_NOTES } from "./tax/summary";
 import { FUND_TYPE_LABELS } from "./tax/constants";
 import { formatEur, formatNumber, formatPercent } from "./money";
 import { formatDateDe } from "./dates";
 import { timestampForFilename } from "./download";
+import { amountKpis, PERFORMANCE_EXPLANATION, performanceKpis, periodText } from "./kpis";
 
 export const BROKER_LABELS: Record<BrokerId, string> = {
   traderepublic: "Trade Republic",
   scalable: "Scalable Capital",
 };
+
+export const TAX_TABLE_COLUMNS = ["Anteil", "Stück", "Monate", "Basisertrag", "Vorabpausch.", "Steuerpfl.", "Steuer"];
+export const TAX_TABLE_WIDTHS = [0.2, 0.08, 0.08, 0.16, 0.18, 0.15, 0.15];
 
 function pdfText(text: string): string {
   return text.replace(/\u2212/g, "-").replace(/\u2192/g, "bis").replace(/[\u202F\u2009]/g, "\u00A0");
@@ -32,48 +37,51 @@ export interface PdfMeta {
   fileName: string;
   broker: BrokerId;
   transactionCount: number;
+  skippedRows?: number;
+  warnings?: readonly ParseWarning[];
   generatedAt: Date;
 }
 
-export function buildReportPdfData(report: PerformanceReport, tax: TaxSummary, meta: PdfMeta): ReportPdfData {
-  const { portfolio, ttwror, ttwrorAnnualized, irr, volatility, drawdown } = report;
-  const period =
-    portfolio.firstDate && portfolio.lastDate ? `${formatDateDe(portfolio.firstDate)} bis ${formatDateDe(portfolio.lastDate)}` : "–";
+export function sourceLineText(meta: PdfMeta, period: string): string {
+  const skipped = meta.skippedRows && meta.skippedRows > 0 ? ` · ${meta.skippedRows} übersprungen` : "";
+  return `${meta.fileName} · ${BROKER_LABELS[meta.broker]} · ${meta.transactionCount} Buchungen${skipped} · Zeitraum ${period}`;
+}
 
-  const metrics = [
-    {
-      label: "TTWROR",
-      value: formatPercent(ttwror.total, true),
-      hint: ttwrorAnnualized ? `${formatPercent(ttwrorAnnualized, true)} p. a.` : period,
-    },
-    {
-      label: "IRR (geldgewichtet)",
-      value: irr.ok ? `${formatPercent(irr.rate, true)} p. a.` : "nicht bestimmbar",
-      hint: irr.ok ? `${irr.method === "newton" ? "Newton" : "Bisektion"}, ${irr.iterations} Iterationen` : "",
-    },
-    { label: "Volatilität", value: volatility ? `${formatPercent(volatility)} p. a.` : "–", hint: "aus Transaktionsbewertungen" },
-    {
-      label: "Max Drawdown",
-      value: drawdown.maxDrawdown.gt(0) ? `-${formatPercent(drawdown.maxDrawdown)}` : formatPercent(0),
-      hint: drawdown.peakDate && drawdown.troughDate ? `${formatDateDe(drawdown.peakDate)} bis ${formatDateDe(drawdown.troughDate)}` : "",
-    },
-    { label: "Depotwert (letzter Kurs)", value: formatEur(portfolio.totals.endValue) },
-    { label: "Investiert (Käufe)", value: formatEur(portfolio.totals.invested) },
-    { label: "Verkaufserlöse", value: formatEur(portfolio.totals.proceeds) },
-    { label: "Dividenden netto", value: formatEur(portfolio.totals.dividends) },
-  ];
+function joinHints(...parts: Array<string | null | undefined>): string {
+  return parts.filter((part): part is string => Boolean(part)).join(" · ");
+}
+
+function priceText(row: TaxRow, field: "yearStartPrice" | "yearEndPrice"): string {
+  const value = row.settings[field];
+  if (!value) return "–";
+  return row.prefilled[field] && row.status !== "notApplicable" ? `${value} € (vorläufig, Kurs aus dem Export)` : `${value} €`;
+}
+
+function hintText(row: TaxRow, year: number): string {
+  if (row.estimate?.fundType === "none") return "Keine Vorabpauschale: kein Fonds (z. B. Einzelaktie oder Anleihe).";
+  if (!row.heldAtYearEnd) return noHoldingText(year);
+  return row.sameSourcePrefill
+    ? `Keine Schätzung: Der Export enthält für ${year} keinen eigenen Kurs; bitte Kurse am 01.01. und 31.12. eintragen.`
+    : "Keine Schätzung: Kurse am 01.01. und 31.12. fehlen; bitte eintragen.";
+}
+
+export function buildReportPdfData(report: PerformanceReport, tax: TaxSummary, meta: PdfMeta): ReportPdfData {
+  const { portfolio, ttwror } = report;
+  const period = periodText(report);
+
+  const metrics = [...performanceKpis(report), ...amountKpis(report)].map((kpi) => ({ label: kpi.label, value: kpi.value, hint: kpi.hint }));
 
   const valueTable: ReportTable = {
-    title: "Wertverlauf an den Buchungstagen",
+    title: "Wertverlauf an den Depotbuchungstagen",
     columns: ["Datum", "Depotwert", "Externer Zahlungsstrom", "Periodenrendite"],
-    rows: portfolio.points.map((point, index) => {
+    rows: portfolio.points.map((point) => {
       const p = ttwror.periods.find((x) => x.to === point.date);
       return {
         cells: [
           formatDateDe(point.date),
           formatEur(point.value),
           point.flow.isZero() ? "–" : formatEur(point.flow),
-          index === 0 || !p ? "–" : formatPercent(p.rate, true),
+          p ? formatPercent(p.rate, true) : "–",
         ],
       };
     }),
@@ -98,18 +106,25 @@ export function buildReportPdfData(report: PerformanceReport, tax: TaxSummary, m
     rows: t.slices.map((s) => ({ cells: [s.label, formatPercent(s.share), formatEur(s.value)] })),
   }));
 
+  const taxStatus = tax.totals.status;
+  const statusHint = taxStatus === "missing" ? MISSING_PRICES_LABEL : taxStatus === "provisional" ? PROVISIONAL_PRICE_LABEL : null;
+  const taxAmount = (value: Parameters<typeof formatEur>[0]) => (taxStatus === "missing" ? "–" : formatEur(value));
   const taxSummary = [
-    { label: `Vorabpauschale ${tax.year}`, value: formatEur(tax.totals.vorabpauschale), hint: `Basiszins ${formatPercent(tax.basiszins)}` },
-    { label: "Steuerpflichtig nach Teilfreistellung", value: formatEur(tax.totals.taxable) },
-    { label: "Geschätzte Steuer auf Vorabpauschale", value: formatEur(tax.totals.tax), hint: "vor Sparerpauschbetrag" },
+    {
+      label: `Vorabpauschale ${tax.year}`,
+      value: taxAmount(tax.totals.vorabpauschale),
+      hint: joinHints(statusHint, tax.basiszins ? `Basiszins ${formatPercent(tax.basiszins)}` : null),
+    },
+    { label: "Steuerpflichtig nach Teilfreistellung", value: taxAmount(tax.totals.taxable), hint: joinHints(statusHint) },
+    { label: "Geschätzte Steuer auf Vorabpauschale", value: taxAmount(tax.totals.tax), hint: joinHints(statusHint, "vor Sparerpauschbetrag") },
     { label: `Realisierte Gewinne ${tax.year} (FIFO)`, value: formatEur(tax.totals.realizedGain), hint: "vor Teilfreistellung und Steuer" },
   ];
 
   const taxTables: ReportTable[] = tax.rows.map((row) => {
     const { position, estimate, settings, sales: saleRows } = row;
-    const detailed = estimate !== null && estimate.fundType !== "none";
-    const columns = detailed ? ["Anteil", "Stück", "Monate", "Basisertrag", "Vorabpauschale", "Steuerpflichtig", "Steuer"] : ["Hinweis"];
-    const widths = detailed ? [0.22, 0.09, 0.09, 0.15, 0.15, 0.15, 0.15] : [1];
+    const detailed = estimate !== null && estimate.fundType !== "none" && row.heldAtYearEnd;
+    const columns = detailed ? TAX_TABLE_COLUMNS : ["Hinweis"];
+    const widths = detailed ? TAX_TABLE_WIDTHS : [1];
     const rows =
       detailed && estimate
         ? [
@@ -129,15 +144,17 @@ export function buildReportPdfData(report: PerformanceReport, tax: TaxSummary, m
               emphasis: true,
             },
           ]
-        : [{ cells: [estimate ? "Keine Vorabpauschale: kein Fonds (z. B. Einzelaktie oder Anleihe)." : "Keine Schätzung: Kurse am 01.01. und 31.12. fehlen."] }];
+        : [{ cells: [hintText(row, tax.year)] }];
     const sales = saleRows.map(
       ({ sale, credit, gain }) =>
         `Verkauf ${formatDateDe(sale.date)}, ${formatNumber(sale.sharesSold)} Stück: Erlös ${formatEur(sale.proceeds)}, Anschaffungskosten ${formatEur(sale.cost)}${credit.gt(0) ? `, angesetzte Vorabpauschalen ${formatEur(credit)}` : ""}, Gewinn ${formatEur(gain)} (FIFO)`,
     );
     const footnoteParts = [
-      `${FUND_TYPE_LABELS[settings.fundType]} · Kurs 01.01.${tax.year}: ${settings.yearStartPrice || "–"} € · Kurs 31.12.${tax.year}: ${settings.yearEndPrice || "–"} €`,
+      settings.fundType === "none" || !row.heldAtYearEnd
+        ? FUND_TYPE_LABELS[settings.fundType]
+        : `${FUND_TYPE_LABELS[settings.fundType]} · Kurs 01.01.${tax.year}: ${priceText(row, "yearStartPrice")} · Kurs 31.12.${tax.year}: ${priceText(row, "yearEndPrice")}`,
       ...sales,
-      ...(position.distributionsInYear.gt(0) ? [`Ausschüttungen ${tax.year}: ${formatEur(position.distributionsInYear)}`] : []),
+      ...(position.distributionsInYear.gt(0) ? [distributionText(position, settings.fundType, tax.year)] : []),
     ];
     return {
       title: `${position.name}${position.isin ? ` (${position.isin})` : ""}`,
@@ -149,19 +166,23 @@ export function buildReportPdfData(report: PerformanceReport, tax: TaxSummary, m
     };
   });
 
+  const warnings = (meta.warnings ?? []).map((w) => `Einlesen: ${w.message}`);
+
   return {
     title: "Depot-Report",
     subtitle: `Performance, Allokation und geschätzte Vorabpauschale ${tax.year}`,
     generatedAt: formatDateDe(timestampForFilename(meta.generatedAt)),
-    sourceLine: pdfText(`${meta.fileName} · ${BROKER_LABELS[meta.broker]} · ${meta.transactionCount} Buchungen · Zeitraum ${period}`),
-    metrics: metrics.map((m) => ({ ...m, label: pdfText(m.label), value: pdfText(m.value), hint: pdfText(m.hint ?? "") })),
+    sourceLine: pdfText(sourceLineText(meta, period)),
+    metrics: metrics.map((m) => ({ label: pdfText(m.label), value: pdfText(m.value), hint: pdfText(m.hint) })),
+    metricsNote: pdfText(PERFORMANCE_EXPLANATION),
     valueTable: sanitizeTable(valueTable),
     positionsTable: sanitizeTable(positionsTable),
     allocationTables: allocationTables.map(sanitizeTable),
-    taxSummary: taxSummary.map((m) => ({ ...m, value: pdfText(m.value), hint: pdfText(m.hint ?? "") })),
+    taxSummary: taxSummary.map((m) => ({ ...m, value: pdfText(m.value), hint: pdfText(m.hint) })),
     taxTables: taxTables.map(sanitizeTable),
     taxMethod: TAX_METHOD_NOTES.map(pdfText),
-    notes: report.notes.map(pdfText),
+    notes: [...report.notes, ...warnings].map(pdfText),
     disclaimer: pdfText(DISCLAIMER_LONG),
+    footerLine: pdfText(`Erstellt mit DepotDoktor · ${projectDisplayUrl("depotdoktor")}`),
   };
 }

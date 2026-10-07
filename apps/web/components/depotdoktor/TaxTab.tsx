@@ -1,19 +1,32 @@
 "use client";
 
 import { useId } from "react";
+import type { BrokerId } from "@portfolio/csv";
 import { StatTile } from "@portfolio/ui";
-import { formatEur, formatNumber, formatPercent } from "@/lib/depotdoktor/money";
+import { formatEur, formatNumber, formatPercent, type Decimal } from "@/lib/depotdoktor/money";
 import { formatDateDe } from "@/lib/depotdoktor/dates";
 import { BASISZINS, FUND_TYPE_LABELS, type FundType } from "@/lib/depotdoktor/tax/constants";
-import type { TaxInputAction } from "@/lib/depotdoktor/tax/inputs";
-import { TAX_METHOD_NOTES, type TaxSummary } from "@/lib/depotdoktor/tax/summary";
+import type { PriceField, TaxInputAction } from "@/lib/depotdoktor/tax/inputs";
+import {
+  distributionText,
+  MISSING_PRICES_LABEL,
+  noHoldingText,
+  PROVISIONAL_PRICE_LABEL,
+  TAX_METHOD_NOTES,
+  type TaxRow,
+  type TaxSummary,
+} from "@/lib/depotdoktor/tax/summary";
+import { ScrollRegion } from "./ScrollRegion";
 
 export const TAX_YEARS = Object.keys(BASISZINS)
   .map(Number)
   .sort((a, b) => b - a);
 
+export const SCALABLE_FUND_TYPE_HINT = "Der Scalable-Export unterscheidet nicht zwischen Aktie und Fonds. Bitte prüfen Sie den Fondstyp.";
+
 export interface TaxTabProps {
   summary: TaxSummary;
+  broker: BrokerId;
   onYearChange: (year: number) => void;
   onInputChange: (action: TaxInputAction) => void;
   onCreditChange: (saleId: string, value: string) => void;
@@ -61,8 +74,63 @@ function SaleCreditField({ value, valid, onChange }: SaleCreditFieldProps) {
   );
 }
 
-export function TaxTab({ summary, onYearChange, onInputChange, onCreditChange }: TaxTabProps) {
+interface PriceFieldProps {
+  row: TaxRow;
+  year: number;
+  field: PriceField;
+  label: string;
+  describedBy?: string | undefined;
+  onInputChange: (action: TaxInputAction) => void;
+}
+
+function PriceInput({ row, year, field, label, describedBy, onInputChange }: PriceFieldProps) {
+  const baseId = useId();
+  const inputId = `${baseId}-input`;
+  const hintId = `${baseId}-hint`;
+  const value = row.settings[field];
+  const provisional = row.prefilled[field] && value !== "" && row.status !== "notApplicable";
+  const description = [provisional ? hintId : null, describedBy ?? null].filter(Boolean).join(" ");
+  return (
+    <div className="text-xs text-muted">
+      <label htmlFor={inputId} className="block">
+        {label}
+      </label>
+      <input
+        id={inputId}
+        inputMode="decimal"
+        value={value}
+        onChange={(e) => onInputChange({ type: "setPrice", year, positionKey: row.position.key, field, value: e.target.value })}
+        className={inputClass}
+        aria-describedby={description === "" ? undefined : description}
+        data-testid={`tax-${field === "yearStartPrice" ? "start" : "end"}-price`}
+      />
+      {provisional ? (
+        <p id={hintId} className="mt-1 text-gold-deep" data-testid="tax-price-provisional">
+          {PROVISIONAL_PRICE_LABEL}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function missingText(row: TaxRow, year: number): string {
+  if (row.sameSourcePrefill) {
+    return `Kurse eintragen: Der Export enthält für ${year} keinen eigenen Kurs dieser Position, vorbelegt wäre zweimal derselbe Kurs. Bitte Kurs am 01.01. und 31.12. als Dezimalzahl eintragen.`;
+  }
+  return "Kurse eintragen: Bitte Kurs am 01.01. und 31.12. als Dezimalzahl eintragen.";
+}
+
+function joinHints(...parts: Array<string | null>): string | undefined {
+  const joined = parts.filter((part): part is string => Boolean(part)).join(" · ");
+  return joined === "" ? undefined : joined;
+}
+
+export function TaxTab({ summary, broker, onYearChange, onInputChange, onCreditChange }: TaxTabProps) {
+  const baseId = useId();
   const { year, rows, totals } = summary;
+  const missing = totals.status === "missing";
+  const statusHint = missing ? MISSING_PRICES_LABEL : totals.status === "provisional" ? PROVISIONAL_PRICE_LABEL : null;
+  const amount = (value: Decimal) => (missing ? "–" : formatEur(value));
 
   return (
     <div className="space-y-6" data-testid="tax-tab">
@@ -90,16 +158,21 @@ export function TaxTab({ summary, onYearChange, onInputChange, onCreditChange }:
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
           label={`Vorabpauschale ${year}`}
-          value={formatEur(totals.vorabpauschale)}
-          hint="Summe aller Positionen"
+          value={amount(totals.vorabpauschale)}
+          hint={joinHints(statusHint, "Summe aller Positionen")}
           testId="tax-vorabpauschale"
         />
-        <StatTile label="Steuerpflichtig nach Teilfreistellung" value={formatEur(totals.taxable)} testId="tax-taxable" />
+        <StatTile
+          label="Steuerpflichtig nach Teilfreistellung"
+          value={amount(totals.taxable)}
+          hint={joinHints(statusHint)}
+          testId="tax-taxable"
+        />
         <StatTile
           label="Geschätzte Steuer auf Vorabpauschale"
-          value={formatEur(totals.tax)}
-          hint="vor Sparerpauschbetrag (1.000 € / 2.000 €)"
-          tone={totals.tax.gt(0) ? "negative" : "neutral"}
+          value={amount(totals.tax)}
+          hint={joinHints(statusHint, "vor Sparerpauschbetrag (1.000 € / 2.000 €)")}
+          tone={!missing && totals.tax.gt(0) ? "negative" : "neutral"}
           testId="tax-estimated-tax"
         />
         <StatTile
@@ -115,141 +188,159 @@ export function TaxTab({ summary, onYearChange, onInputChange, onCreditChange }:
         <p className="rounded-lg border border-line bg-surface p-6 text-sm text-muted">Keine Wertpapierpositionen im Jahr {year}.</p>
       ) : null}
 
-      {rows.map(({ position, settings, estimate, sales, realizedGain }) => (
-        <section key={position.key} className="rounded-lg border border-line bg-surface p-6" data-testid="tax-position">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h2 className="font-serif text-xl">{position.name}</h2>
-              <p className="text-xs text-muted">
-                {position.isin ?? "ohne ISIN"} · Bestand 01.01.: {formatNumber(position.sharesAtYearStart)} · Bestand 31.12.:{" "}
-                {formatNumber(position.sharesAtYearEnd)}
-                {position.lastKnownPriceDate ? ` · letzter Kurs im Export vom ${formatDateDe(position.lastKnownPriceDate)}` : ""}
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <label className="text-xs text-muted">
-                Fondstyp
-                <select
-                  value={settings.fundType}
-                  onChange={(e) => onInputChange({ type: "setFundType", positionKey: position.key, fundType: e.target.value as FundType })}
-                  className="mt-1 block w-full rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink"
-                >
-                  {(Object.keys(FUND_TYPE_LABELS) as FundType[]).map((ft) => (
-                    <option key={ft} value={ft}>
-                      {FUND_TYPE_LABELS[ft]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs text-muted">
-                Kurs 01.01.{year} (€)
-                <input
-                  inputMode="decimal"
-                  value={settings.yearStartPrice}
-                  onChange={(e) =>
-                    onInputChange({ type: "setPrice", year, positionKey: position.key, field: "yearStartPrice", value: e.target.value })
-                  }
-                  className={inputClass}
-                />
-              </label>
-              <label className="text-xs text-muted">
-                Kurs 31.12.{year} (€)
-                <input
-                  inputMode="decimal"
-                  value={settings.yearEndPrice}
-                  onChange={(e) =>
-                    onInputChange({ type: "setPrice", year, positionKey: position.key, field: "yearEndPrice", value: e.target.value })
-                  }
-                  className={inputClass}
-                />
-              </label>
-            </div>
-          </div>
-
-          {estimate && estimate.fundType === "none" ? (
-            <p className="mt-4 text-sm text-muted">Für diese Position wird keine Vorabpauschale berechnet.</p>
-          ) : estimate ? (
-            <div className="mt-4 overflow-x-auto" tabIndex={0} role="region" aria-label={`Vorabpauschale ${position.name}`}>
-              <table className="w-full text-sm">
-                <thead className="text-left text-xs uppercase tracking-wide text-muted">
-                  <tr>
-                    <th className="py-2 pr-4">Anteil</th>
-                    <th className="py-2 pr-4 text-right">Stück</th>
-                    <th className="py-2 pr-4 text-right">Monate entfallen</th>
-                    <th className="py-2 pr-4 text-right">Basisertrag</th>
-                    <th className="py-2 pr-4 text-right">Vorabpauschale</th>
-                    <th className="py-2 pr-4 text-right">Steuerpflichtig</th>
-                    <th className="py-2 text-right">Steuer</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {estimate.parts.map((part) => (
-                    <tr key={part.label} className="border-t border-line">
-                      <td className="py-2 pr-4">{part.label.startsWith("Kauf ") ? `Kauf ${formatDateDe(part.label.slice(5))}` : part.label}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums">{formatNumber(part.shares)}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums">{part.monthsBeforeAcquisition}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums">{formatEur(part.result.basisertrag)}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums">
-                        {formatEur(part.result.vorabpauschale)}
-                        {part.result.capApplied ? <span className="ml-1 text-xs text-gold-deep">Deckel</span> : null}
-                      </td>
-                      <td className="py-2 pr-4 text-right tabular-nums">{formatEur(part.result.taxable)}</td>
-                      <td className="py-2 text-right tabular-nums">{formatEur(part.result.tax)}</td>
-                    </tr>
-                  ))}
-                  <tr className="border-t border-ink font-medium">
-                    <td className="py-2 pr-4" colSpan={4}>
-                      Summe
-                    </td>
-                    <td className="py-2 pr-4 text-right tabular-nums">{formatEur(estimate.vorabpauschale)}</td>
-                    <td className="py-2 pr-4 text-right tabular-nums">{formatEur(estimate.taxable)}</td>
-                    <td className="py-2 text-right tabular-nums" data-testid="position-tax">
-                      {formatEur(estimate.tax)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="mt-4 text-sm text-bordeaux">Bitte Kurs am 01.01. und 31.12. als Dezimalzahl eintragen.</p>
-          )}
-
-          {sales.length > 0 ? (
-            <div className="mt-4 text-sm">
-              <h3 className="font-medium">Verkäufe {year} (FIFO)</h3>
-              <ul className="mt-1 space-y-3 text-muted">
-                {sales.map(({ sale, creditAllowed, creditInput, creditValid, credit, gain }) => (
-                  <li key={sale.id} data-testid="tax-sale">
-                    <p>
-                      {formatDateDe(sale.date)}: {formatNumber(sale.sharesSold)} Stück verkauft, Erlös {formatEur(sale.proceeds)},
-                      Anschaffungskosten {formatEur(sale.cost)}
-                      {credit.gt(0) ? `, angesetzte Vorabpauschalen ${formatEur(credit)}` : ""}, Gewinn{" "}
-                      <span className={gain.lt(0) ? "text-bordeaux" : "text-green"} data-testid="tax-sale-gain">
-                        {formatEur(gain)}
-                      </span>
-                      {sale.sharesUncovered.gt(0) ? ` (${formatNumber(sale.sharesUncovered)} Stück ohne bekannten Einstand)` : ""}
+      {rows.map((row, index) => {
+        const { position, settings, estimate, sales, realizedGain } = row;
+        const fundTypeHintId = `${baseId}-${index}-fund-type-hint`;
+        const missingId = `${baseId}-${index}-missing`;
+        const showFundTypeHint = broker === "scalable" && position.assetClass === "unknown";
+        const pricesMissing = estimate === null && row.heldAtYearEnd;
+        return (
+          <section key={position.key} className="rounded-lg border border-line bg-surface p-4 sm:p-6" data-testid="tax-position">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="font-serif text-xl">{position.name}</h2>
+                <p className="text-xs text-muted">
+                  {position.isin ?? "ohne ISIN"} · Bestand 01.01.: {formatNumber(position.sharesAtYearStart)} · Bestand 31.12.:{" "}
+                  {formatNumber(position.sharesAtYearEnd)}
+                  {position.lastKnownPriceDate ? ` · letzter Kurs im Export bis Jahresende vom ${formatDateDe(position.lastKnownPriceDate)}` : ""}
+                </p>
+              </div>
+              <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-[minmax(14rem,auto)_8rem_8rem]">
+                <div className="text-xs text-muted">
+                  <label className="block">
+                    Fondstyp
+                    <select
+                      value={settings.fundType}
+                      onChange={(e) =>
+                        onInputChange({ type: "setFundType", positionKey: position.key, fundType: e.target.value as FundType })
+                      }
+                      className="mt-1 block w-full rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink"
+                      aria-describedby={showFundTypeHint ? fundTypeHintId : undefined}
+                    >
+                      {(Object.keys(FUND_TYPE_LABELS) as FundType[]).map((ft) => (
+                        <option key={ft} value={ft}>
+                          {FUND_TYPE_LABELS[ft]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {showFundTypeHint ? (
+                    <p id={fundTypeHintId} className="mt-1 max-w-xs text-gold-deep" data-testid="tax-fund-type-hint">
+                      {SCALABLE_FUND_TYPE_HINT}
                     </p>
-                    {creditAllowed ? (
-                      <SaleCreditField
-                        value={creditInput}
-                        valid={creditValid}
-                        onChange={(value) => onCreditChange(sale.id, value)}
-                      />
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-1 text-xs text-muted">Realisierter Gewinn gesamt: {formatEur(realizedGain)}.</p>
+                  ) : null}
+                </div>
+                <PriceInput
+                  row={row}
+                  year={year}
+                  field="yearStartPrice"
+                  label={`Kurs 01.01.${year} (€)`}
+                  describedBy={pricesMissing ? missingId : undefined}
+                  onInputChange={onInputChange}
+                />
+                <PriceInput
+                  row={row}
+                  year={year}
+                  field="yearEndPrice"
+                  label={`Kurs 31.12.${year} (€)`}
+                  describedBy={pricesMissing ? missingId : undefined}
+                  onInputChange={onInputChange}
+                />
+              </div>
             </div>
-          ) : null}
 
-          {position.distributionsInYear.gt(0) ? (
-            <p className="mt-3 text-xs text-muted">
-              Ausschüttungen {year}: {formatEur(position.distributionsInYear)} (mindern den Basisertrag).
-            </p>
-          ) : null}
-        </section>
-      ))}
+            {estimate && estimate.fundType === "none" ? (
+              <p className="mt-4 text-sm text-muted">Kein Fonds: Für diese Position wird keine Vorabpauschale berechnet.</p>
+            ) : !row.heldAtYearEnd ? (
+              <p className="mt-4 text-sm text-muted" data-testid="tax-no-holding">
+                {noHoldingText(year)}
+              </p>
+            ) : estimate ? (
+              <ScrollRegion label={`Vorabpauschale ${position.name}`} className="mt-4">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-xs uppercase tracking-wide text-muted">
+                    <tr>
+                      <th className="py-2 pr-3 sm:pr-4">Anteil</th>
+                      <th className="py-2 pr-3 text-right sm:pr-4">Vorabpauschale</th>
+                      <th className="py-2 pr-3 text-right sm:pr-4">Steuer</th>
+                      <th className="py-2 pr-4 text-right">Stück</th>
+                      <th className="py-2 pr-4 text-right">Monate entfallen</th>
+                      <th className="py-2 pr-4 text-right">Basisertrag</th>
+                      <th className="py-2 text-right">Steuerpflichtig</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {estimate.parts.map((part) => (
+                      <tr key={part.label} className="border-t border-line">
+                        <td className="py-2 pr-3 sm:pr-4 sm:whitespace-nowrap">
+                          {part.label.startsWith("Kauf ") ? `Kauf ${formatDateDe(part.label.slice(5))}` : part.label}
+                        </td>
+                        <td className="py-2 pr-3 text-right tabular-nums whitespace-nowrap sm:pr-4">
+                          {formatEur(part.result.vorabpauschale)}
+                          {part.result.capApplied ? <span className="ml-1 text-xs text-gold-deep">Deckel</span> : null}
+                        </td>
+                        <td className="py-2 pr-3 text-right tabular-nums whitespace-nowrap sm:pr-4">{formatEur(part.result.tax)}</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">{formatNumber(part.shares)}</td>
+                        <td className="py-2 pr-4 text-right tabular-nums">{part.monthsBeforeAcquisition}</td>
+                        <td className="py-2 pr-4 text-right tabular-nums whitespace-nowrap">{formatEur(part.result.basisertrag)}</td>
+                        <td className="py-2 text-right tabular-nums whitespace-nowrap">{formatEur(part.result.taxable)}</td>
+                      </tr>
+                    ))}
+                    <tr className="border-t border-ink font-medium">
+                      <td className="py-2 pr-3 sm:pr-4">Summe</td>
+                      <td className="py-2 pr-3 text-right tabular-nums whitespace-nowrap sm:pr-4">{formatEur(estimate.vorabpauschale)}</td>
+                      <td className="py-2 pr-3 text-right tabular-nums whitespace-nowrap sm:pr-4" data-testid="position-tax">
+                        {formatEur(estimate.tax)}
+                      </td>
+                      <td className="py-2 pr-4" colSpan={3} />
+                      <td className="py-2 text-right tabular-nums whitespace-nowrap">{formatEur(estimate.taxable)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </ScrollRegion>
+            ) : (
+              <p id={missingId} className="mt-4 text-sm text-bordeaux" data-testid="tax-prices-missing">
+                {missingText(row, year)}
+              </p>
+            )}
+
+            {sales.length > 0 ? (
+              <div className="mt-4 text-sm">
+                <h3 className="font-medium">Verkäufe {year} (FIFO)</h3>
+                <ul className="mt-1 space-y-3 text-muted">
+                  {sales.map(({ sale, creditAllowed, creditInput, creditValid, credit, gain }) => (
+                    <li key={sale.id} data-testid="tax-sale">
+                      <p>
+                        {formatDateDe(sale.date)}: {formatNumber(sale.sharesSold)} Stück verkauft, Erlös {formatEur(sale.proceeds)},
+                        Anschaffungskosten {formatEur(sale.cost)}
+                        {credit.gt(0) ? `, angesetzte Vorabpauschalen ${formatEur(credit)}` : ""}, Gewinn{" "}
+                        <span className={gain.lt(0) ? "text-bordeaux" : "text-green"} data-testid="tax-sale-gain">
+                          {formatEur(gain)}
+                        </span>
+                        {sale.sharesUncovered.gt(0) ? ` (${formatNumber(sale.sharesUncovered)} Stück ohne bekannten Einstand)` : ""}
+                      </p>
+                      {creditAllowed ? (
+                        <SaleCreditField
+                          value={creditInput}
+                          valid={creditValid}
+                          onChange={(value) => onCreditChange(sale.id, value)}
+                        />
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1 text-xs text-muted">Realisierter Gewinn gesamt: {formatEur(realizedGain)}.</p>
+              </div>
+            ) : null}
+
+            {position.distributionsInYear.gt(0) ? (
+              <p className="mt-3 text-xs text-muted" data-testid="tax-distributions">
+                {distributionText(position, settings.fundType, year)}.
+              </p>
+            ) : null}
+          </section>
+        );
+      })}
 
       <section className="rounded-lg border border-line bg-surface p-6 text-sm">
         <h2 className="mb-3 font-serif text-lg">So wird gerechnet</h2>

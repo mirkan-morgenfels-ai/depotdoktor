@@ -41,6 +41,9 @@ describe("detectFileKind", () => {
   test("jede Nicht-Text-Art hat eine deutsche Meldung", () => {
     expect(FILE_KIND_MESSAGES.pdf).toContain("PDF");
     expect(FILE_KIND_MESSAGES.zip).toContain("Excel");
+    expect(FILE_KIND_MESSAGES.zip).toContain("erneut aus der App bzw. dem Webportal Ihres Brokers herunter");
+    expect(FILE_KIND_MESSAGES.zip).toContain("ohne ihn vorher in Excel zu öffnen und zu speichern");
+    expect(FILE_KIND_MESSAGES.zip).not.toContain("Speichern unter");
     expect(FILE_KIND_MESSAGES.binary).toContain("Textdatei");
     expect(FILE_KIND_MESSAGES.empty).toBe("Die Datei ist leer.");
   });
