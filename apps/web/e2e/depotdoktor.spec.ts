@@ -122,9 +122,8 @@ test("UTF-16-Export mit BOM wird gelesen", async ({ page }) => {
   await expect(page.getByTestId("performance-tab")).toContainText("+2,41 %");
 });
 
-test("Angesetzte Vorabpauschalen mindern den Veräußerungsgewinn", async ({ page }) => {
-  await page.goto("/projects/depotdoktor");
-  await page.getByTestId("file-input").setInputFiles({
+test("Angesetzte Vorabpauschalen mindern den Veräußerungsgewinn, Andere Datei setzt sie zurück", async ({ page }) => {
+  const priorYearSaleFile = {
     name: "verkauf-vorjahr.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(
@@ -136,7 +135,9 @@ test("Angesetzte Vorabpauschalen mindern den Veräußerungsgewinn", async ({ pag
       ].join("\n"),
       "utf8",
     ),
-  });
+  };
+  await page.goto("/projects/depotdoktor");
+  await page.getByTestId("file-input").setInputFiles(priorYearSaleFile);
   await expect(page.getByTestId("report-section")).toContainText("2 Buchungen");
   await page.getByRole("tab", { name: "Steuer" }).click();
   const sale = page.getByTestId("tax-sale");
@@ -170,6 +171,100 @@ test("Angesetzte Vorabpauschalen mindern den Veräußerungsgewinn", async ({ pag
   await expect(credit).toHaveAccessibleDescription(/Bitte einen Betrag ab 0 als Dezimalzahl eintragen\. Bis dahin wird nichts abgezogen\.$/);
   await expect(sale.getByTestId("tax-sale-gain")).toHaveText("200,00 €");
   await expect(realizedTile).toContainText("200,00 €");
+
+  await credit.fill("25,30");
+  await expect(sale.getByTestId("tax-sale-gain")).toHaveText("174,70 €");
+  await page.getByRole("button", { name: "Andere Datei" }).click();
+  await expect(page.getByTestId("report-section")).toHaveCount(0);
+  await page.getByTestId("file-input").setInputFiles(priorYearSaleFile);
+  await expect(page.getByTestId("report-section")).toContainText("2 Buchungen");
+  await page.getByRole("tab", { name: "Steuer" }).click();
+  await page.getByTestId("tax-year").selectOption("2026");
+  await expect(credit).toHaveValue("");
+  await expect(sale.getByTestId("tax-sale-gain")).toHaveText("200,00 €");
+  await expect(sale).not.toContainText("angesetzte Vorabpauschalen 25,30 €");
+  await expect(realizedTile).toContainText("200,00 €");
+});
+
+test("Kurse im Steuerreiter gelten je Steuerjahr, der Fondstyp für alle Jahre, Andere Datei setzt beides zurück", async ({ page }) => {
+  const pricesPerYearFile = {
+    name: "kurse-je-jahr.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      [
+        "date;time;status;reference;description;assetType;type;isin;shares;price;amount;fee;tax;currency",
+        '2025-03-03;09:00:00;Executed;"E2E0101";"Testfonds Welt UCITS ETF";Security;Buy;IE00TEST0001;10;100,00;-1000,00;0,00;0,00;EUR',
+        '2026-01-15;09:00:00;Executed;"E2E0102";"Testfonds Welt UCITS ETF";Security;Buy;IE00TEST0001;5;110,00;-550,00;0,00;0,00;EUR',
+        "",
+      ].join("\n"),
+      "utf8",
+    ),
+  };
+  await page.goto("/projects/depotdoktor");
+  await page.getByTestId("file-input").setInputFiles(pricesPerYearFile);
+  await expect(page.getByTestId("report-section")).toContainText("2 Buchungen");
+  await page.getByRole("tab", { name: "Steuer" }).click();
+
+  const year = page.getByTestId("tax-year");
+  const fundType = page.getByRole("combobox", { name: "Fondstyp" });
+  const start = (y: number) => page.getByRole("textbox", { name: `Kurs 01.01.${y}` });
+  const end = (y: number) => page.getByRole("textbox", { name: `Kurs 31.12.${y}` });
+  const expectTile = (testId: string, label: string, value: string) =>
+    expect(page.getByTestId(testId)).toHaveText(new RegExp(`^${label}\\s*${value}\\s€`));
+  const expectTaxTiles = async (y: number, vorabpauschale: string, taxable: string, tax: string) => {
+    await expectTile("tax-vorabpauschale", `Vorabpauschale ${y}`, vorabpauschale);
+    await expectTile("tax-taxable", "Steuerpflichtig nach Teilfreistellung", taxable);
+    await expectTile("tax-estimated-tax", "Geschätzte Steuer auf Vorabpauschale", tax);
+  };
+
+  await expect(year).toHaveValue("2026");
+  await expect(start(2026)).toHaveValue("110,00");
+  await expect(end(2026)).toHaveValue("110,00");
+  await expectTaxTiles(2026, "0,00", "0,00", "0,00");
+
+  await start(2026).fill("105,00");
+  await end(2026).fill("125,00");
+  await expectTaxTiles(2026, "35,28", "24,70", "6,51");
+
+  await year.selectOption("2025");
+  await expect(start(2025)).toHaveValue("100,00");
+  await expect(end(2025)).toHaveValue("100,00");
+  await expectTaxTiles(2025, "0,00", "0,00", "0,00");
+
+  await end(2025).fill("110,00");
+  await expectTaxTiles(2025, "14,76", "10,33", "2,72");
+
+  await year.selectOption("2026");
+  await expect(start(2026)).toHaveValue("105,00");
+  await expect(end(2026)).toHaveValue("125,00");
+  await expectTaxTiles(2026, "35,28", "24,70", "6,51");
+
+  await fundType.selectOption("mixed");
+  await expectTaxTiles(2026, "35,28", "29,99", "7,91");
+
+  await year.selectOption("2025");
+  await expect(fundType).toHaveValue("mixed");
+  await expect(start(2025)).toHaveValue("100,00");
+  await expect(end(2025)).toHaveValue("110,00");
+  await expectTaxTiles(2025, "14,76", "12,54", "3,31");
+
+  await page.getByRole("button", { name: "Andere Datei" }).click();
+  await expect(page.getByTestId("report-section")).toHaveCount(0);
+  await page.getByTestId("file-input").setInputFiles(pricesPerYearFile);
+  await expect(page.getByTestId("report-section")).toContainText("2 Buchungen");
+  await page.getByRole("tab", { name: "Steuer" }).click();
+
+  await year.selectOption("2026");
+  await expect(fundType).toHaveValue("equity");
+  await expect(start(2026)).toHaveValue("110,00");
+  await expect(end(2026)).toHaveValue("110,00");
+  await expectTaxTiles(2026, "0,00", "0,00", "0,00");
+
+  await year.selectOption("2025");
+  await expect(fundType).toHaveValue("equity");
+  await expect(start(2025)).toHaveValue("100,00");
+  await expect(end(2025)).toHaveValue("100,00");
+  await expectTaxTiles(2025, "0,00", "0,00", "0,00");
 });
 
 test("Startseite und Rechtsseiten: KontoKlar extern verlinkt, NetzRadar in Arbeit, Quellcode nicht als einsehbar bezeichnet", async ({ page }) => {

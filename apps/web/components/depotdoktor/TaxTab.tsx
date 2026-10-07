@@ -5,7 +5,8 @@ import { StatTile } from "@portfolio/ui";
 import { formatEur, formatNumber, formatPercent } from "@/lib/depotdoktor/money";
 import { formatDateDe } from "@/lib/depotdoktor/dates";
 import { BASISZINS, FUND_TYPE_LABELS, type FundType } from "@/lib/depotdoktor/tax/constants";
-import { TAX_METHOD_NOTES, type PositionSettings, type TaxSummary } from "@/lib/depotdoktor/tax/summary";
+import type { TaxInputAction } from "@/lib/depotdoktor/tax/inputs";
+import { TAX_METHOD_NOTES, type TaxSummary } from "@/lib/depotdoktor/tax/summary";
 
 export const TAX_YEARS = Object.keys(BASISZINS)
   .map(Number)
@@ -14,7 +15,7 @@ export const TAX_YEARS = Object.keys(BASISZINS)
 export interface TaxTabProps {
   summary: TaxSummary;
   onYearChange: (year: number) => void;
-  onSettingsChange: (positionKey: string, patch: Partial<PositionSettings>) => void;
+  onInputChange: (action: TaxInputAction) => void;
   onCreditChange: (saleId: string, value: string) => void;
 }
 
@@ -60,7 +61,7 @@ function SaleCreditField({ value, valid, onChange }: SaleCreditFieldProps) {
   );
 }
 
-export function TaxTab({ summary, onYearChange, onSettingsChange, onCreditChange }: TaxTabProps) {
+export function TaxTab({ summary, onYearChange, onInputChange, onCreditChange }: TaxTabProps) {
   const { year, rows, totals } = summary;
 
   return (
@@ -87,13 +88,19 @@ export function TaxTab({ summary, onYearChange, onSettingsChange, onCreditChange
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile label={`Vorabpauschale ${year}`} value={formatEur(totals.vorabpauschale)} hint="Summe aller Positionen" />
-        <StatTile label="Steuerpflichtig nach Teilfreistellung" value={formatEur(totals.taxable)} />
+        <StatTile
+          label={`Vorabpauschale ${year}`}
+          value={formatEur(totals.vorabpauschale)}
+          hint="Summe aller Positionen"
+          testId="tax-vorabpauschale"
+        />
+        <StatTile label="Steuerpflichtig nach Teilfreistellung" value={formatEur(totals.taxable)} testId="tax-taxable" />
         <StatTile
           label="Geschätzte Steuer auf Vorabpauschale"
           value={formatEur(totals.tax)}
           hint="vor Sparerpauschbetrag (1.000 € / 2.000 €)"
           tone={totals.tax.gt(0) ? "negative" : "neutral"}
+          testId="tax-estimated-tax"
         />
         <StatTile
           label={`Realisierte Gewinne ${year} (FIFO)`}
@@ -124,7 +131,7 @@ export function TaxTab({ summary, onYearChange, onSettingsChange, onCreditChange
                 Fondstyp
                 <select
                   value={settings.fundType}
-                  onChange={(e) => onSettingsChange(position.key, { fundType: e.target.value as FundType })}
+                  onChange={(e) => onInputChange({ type: "setFundType", positionKey: position.key, fundType: e.target.value as FundType })}
                   className="mt-1 block w-full rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink"
                 >
                   {(Object.keys(FUND_TYPE_LABELS) as FundType[]).map((ft) => (
@@ -139,7 +146,9 @@ export function TaxTab({ summary, onYearChange, onSettingsChange, onCreditChange
                 <input
                   inputMode="decimal"
                   value={settings.yearStartPrice}
-                  onChange={(e) => onSettingsChange(position.key, { yearStartPrice: e.target.value })}
+                  onChange={(e) =>
+                    onInputChange({ type: "setPrice", year, positionKey: position.key, field: "yearStartPrice", value: e.target.value })
+                  }
                   className={inputClass}
                 />
               </label>
@@ -148,7 +157,9 @@ export function TaxTab({ summary, onYearChange, onSettingsChange, onCreditChange
                 <input
                   inputMode="decimal"
                   value={settings.yearEndPrice}
-                  onChange={(e) => onSettingsChange(position.key, { yearEndPrice: e.target.value })}
+                  onChange={(e) =>
+                    onInputChange({ type: "setPrice", year, positionKey: position.key, field: "yearEndPrice", value: e.target.value })
+                  }
                   className={inputClass}
                 />
               </label>

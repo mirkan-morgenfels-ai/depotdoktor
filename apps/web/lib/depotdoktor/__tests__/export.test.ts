@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import { parseBrokerCsv, type Transaction } from "@portfolio/csv";
 import { transactionsToCsv } from "../export-csv";
 import { buildTaxSummary, defaultPositionSettings, parsePriceInput } from "../tax/summary";
+import type { TaxInputs } from "../tax/inputs";
 import { buildTaxPositions } from "../tax/positions";
 import { buildReport } from "../report";
 import { buildReportPdfData } from "../pdf-data";
@@ -14,6 +15,10 @@ function fixtureTransactions(name: string): Transaction[] {
   const result = parseBrokerCsv(readFileSync(path, "utf8"));
   if (!result.ok) throw new Error(result.error);
   return result.transactions;
+}
+
+function etfPrices2026(yearStartPrice: string, yearEndPrice: string): TaxInputs {
+  return { fundTypes: { IE00TEST0001: "equity" }, prices: { 2026: { IE00TEST0001: { yearStartPrice, yearEndPrice } } } };
 }
 
 describe("CSV-Export der normalisierten Transaktionen", () => {
@@ -59,9 +64,7 @@ describe("Steuerzusammenfassung", () => {
   });
 
   test("Summen mit eingegebenem Jahresendkurs 95 € für den ETF", () => {
-    const summary = buildTaxSummary(transactions, 2026, {
-      IE00TEST0001: { fundType: "equity", yearStartPrice: "80,00", yearEndPrice: "95,00" },
-    });
+    const summary = buildTaxSummary(transactions, 2026, etfPrices2026("80,00", "95,00"));
     expect(summary.rows).toHaveLength(2);
     expect(summary.totals.vorabpauschale.toFixed(2)).toBe("179.20");
     expect(summary.totals.taxable.toFixed(2)).toBe("125.44");
@@ -70,9 +73,7 @@ describe("Steuerzusammenfassung", () => {
   });
 
   test("unlesbarer Kurs ergibt keine Schätzung für die Position", () => {
-    const summary = buildTaxSummary(transactions, 2026, {
-      IE00TEST0001: { fundType: "equity", yearStartPrice: "abc", yearEndPrice: "95,00" },
-    });
+    const summary = buildTaxSummary(transactions, 2026, etfPrices2026("abc", "95,00"));
     expect(summary.rows[1]?.estimate).toBeNull();
     expect(summary.totals.tax.toFixed(2)).toBe("0.00");
   });
@@ -87,9 +88,7 @@ describe("Steuerzusammenfassung", () => {
 describe("PDF-Daten", () => {
   const transactions = fixtureTransactions("traderepublic-synthetic.csv");
   const report = buildReport(transactions);
-  const summary = buildTaxSummary(transactions, 2026, {
-    IE00TEST0001: { fundType: "equity", yearStartPrice: "80,00", yearEndPrice: "95,00" },
-  });
+  const summary = buildTaxSummary(transactions, 2026, etfPrices2026("80,00", "95,00"));
   const data = buildReportPdfData(report, summary, {
     fileName: "test.csv",
     broker: "traderepublic",

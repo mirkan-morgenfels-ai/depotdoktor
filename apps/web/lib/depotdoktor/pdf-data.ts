@@ -135,7 +135,7 @@ export function buildReportPdfData(report: PerformanceReport, tax: TaxSummary, m
         `Verkauf ${formatDateDe(sale.date)}, ${formatNumber(sale.sharesSold)} Stück: Erlös ${formatEur(sale.proceeds)}, Anschaffungskosten ${formatEur(sale.cost)}${credit.gt(0) ? `, angesetzte Vorabpauschalen ${formatEur(credit)}` : ""}, Gewinn ${formatEur(gain)} (FIFO)`,
     );
     const footnoteParts = [
-      `${FUND_TYPE_LABELS[settings.fundType]} · Kurs 01.01.: ${settings.yearStartPrice || "–"} € · Kurs 31.12.: ${settings.yearEndPrice || "–"} €`,
+      `${FUND_TYPE_LABELS[settings.fundType]} · Kurs 01.01.${tax.year}: ${settings.yearStartPrice || "–"} € · Kurs 31.12.${tax.year}: ${settings.yearEndPrice || "–"} €`,
       ...sales,
       ...(position.distributionsInYear.gt(0) ? [`Ausschüttungen ${tax.year}: ${formatEur(position.distributionsInYear)}`] : []),
     ];

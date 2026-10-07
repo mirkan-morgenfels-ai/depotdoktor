@@ -1,6 +1,6 @@
 # Verifikation und offene Punkte (K1 DepotDoktor)
 
-Stand: 06.10.2026 (Lückenschluss, siehe letzter Abschnitt). Quellen zur Steuerlogik gehören hierher, nicht in den Code.
+Stand: 07.10.2026 (Kurse je Steuerjahr, siehe letzter Abschnitt). Quellen zur Steuerlogik gehören hierher, nicht in den Code.
 
 ## Prüfstand der Steuerlogik
 
@@ -90,7 +90,7 @@ Nicht geändert, von Dennis zu entscheiden:
 2. **Steuerjahr-Vorbelegung.** Der Reiter Steuer startet mit 2026, obwohl das Jahr läuft; der Kurs 31.12.2026 existiert noch nicht. Alternative: letztes abgeschlossenes Jahr oder Jahr der letzten Buchung vorbelegen.
 3. ~~**Max Drawdown nach Vollverkauf.**~~ Erledigt am 06.10.2026, Begründung und Testfälle im Abschnitt „Lückenschluss 06.10.2026“.
 4. **Standardwerte im Steuerreiter.** Kurs 01.01. und 31.12. sind mit demselben Wert vorbelegt, damit ist die Vorabpauschale ohne Eingabe immer 0 €. Die Kacheln zeigen 0,00 € statt „Kurse fehlen“. Bewusst so gelassen, weil das Umsetzungsdokument Nutzereingabe vorsieht; eine Kennzeichnung „vorläufig“ wäre möglich.
-5. **Kurse im Steuerreiter gelten für alle Steuerjahre.** Eingaben (Fondstyp, Kurs 01.01., Kurs 31.12.) hängen an der Position, nicht am Jahr. Wer 2026 Kurse einträgt und auf 2025 umschaltet, sieht dieselben Werte unter „Kurs 01.01.2025“. Optionen: (a) Kurse je Jahr speichern, Fondstyp je Position behalten (Empfehlung), (b) beim Jahreswechsel alle Eingaben zurücksetzen, (c) so lassen. Gefunden am 06.10.2026, nicht geändert, weil es die Bedienung betrifft. Die Vorabpauschalen-Eingaben je Verkauf liegen in einem eigenen Zustand (Schlüssel: Buchung des Verkaufs), getrennt von Fondstyp und Kursen. In der ersten Fassung vom 06.10.2026 lagen sie in den Positionseinstellungen; dadurch hat schon die erste Eingabe die Kursvorbelegung des gerade gewählten Jahres für alle Jahre festgeschrieben (E2E-Datei: nach Eingabe im Jahr 2026 zeigte 2025 Kurs 120,00 statt 100,00). Das ist behoben; eine Eingabe beim Verkauf löst diesen Effekt nicht mehr aus. Wer Fondstyp oder Kurse ändert, löst ihn weiterhin aus.
+5. ~~**Kurse im Steuerreiter gelten für alle Steuerjahre.**~~ Erledigt am 07.10.2026 nach Option (a), entschieden von Dennis: Kurs 01.01. und 31.12. werden je Steuerjahr und Position gespeichert, der Fondstyp weiter je Position. Beim Wechsel des Steuerjahres erscheinen die für dieses Jahr eingegebenen Kurse oder, ohne Eingabe, die Vorbelegung dieses Jahres, nie die Kurse eines anderen Jahres. Eine Änderung des Fondstyps gilt für alle Jahre und schreibt keine Kursvorbelegung mehr fest. Die Eingaben zu angesetzten Vorabpauschalen je Verkauf sind unverändert. Der PDF-Export nutzt die Kurse des gewählten Jahres und nennt das Jahr in der Fußnote. Einzelheiten im Abschnitt „Kurse je Steuerjahr 07.10.2026“. Ursprünglicher Befund vom 06.10.2026: Fondstyp, Kurs 01.01. und Kurs 31.12. hingen gemeinsam an der Position; wer 2026 Kurse eintrug und auf 2025 umschaltete, sah dieselben Werte unter „Kurs 01.01.2025“. Schon eine Änderung des Fondstyps hat die Kursvorbelegung des gerade gewählten Jahres für alle Jahre festgeschrieben. Optionen waren (a) Kurse je Jahr speichern, Fondstyp je Position behalten, (b) beim Jahreswechsel alle Eingaben zurücksetzen, (c) so lassen.
 
 ## Lückenschluss 06.10.2026
 
@@ -251,3 +251,81 @@ E2E: Kauf 10 @ 100 € im Jahr 2025, Verkauf 10 @ 120 € im Jahr 2026. Geprüft
 - Ungültige Eingabe: Fehlermeldung in der Beschreibung, `aria-invalid`, Verkaufszeile und Kachel wieder bei 200,00 €.
 
 Die Anrechnung je Tranche in `tax/fifo.ts` (`taxedVorabpauschalePerShare`) ist weiterhin 0, weil der Export keine Vorjahreskurse enthält. Rechnung und Anzeige verwenden die Summe beider Quellen (Punkt 3). Wird die Tranchen-Anrechnung künftig befüllt, etwa aus selbst geschätzten Vorabpauschalen der Vorjahre, beschreiben beide Quellen dieselbe Größe. Dann muss feststehen, welche Quelle gilt, damit derselbe Betrag nicht doppelt abgezogen wird; zum Beispiel ersetzt die Eingabe die Schätzung. Solange der Wert 0 ist, stellt sich die Frage nicht.
+
+## Kurse je Steuerjahr 07.10.2026
+
+Branch `fix/k1-kurse-je-jahr` auf Stand `main` nach dem Merge von PR #1 (`a28599e`). Dennis hat für den Bedienfehler aus „Nicht geändert, von Dennis zu entscheiden“, Punkt 5, Option (a) gewählt: Kurse je Steuerjahr und Position speichern, Fondstyp je Position behalten.
+
+### Datenmodell
+
+`apps/web/lib/depotdoktor/tax/inputs.ts`:
+
+- `TaxInputs` hat zwei getrennte Teile: `fundTypes` (Schlüssel: Position) und `prices` (Schlüssel: Steuerjahr, darunter Position; die Felder `yearStartPrice` und `yearEndPrice` sind einzeln optional).
+- `taxInputsReducer` kennt drei Aktionen: `setFundType` (Position, gilt für alle Jahre), `setPrice` (Jahr, Position, Feld, Wert) und `reset` (beim Laden einer neuen Datei und bei „Andere Datei“).
+- Gespeichert wird nur, was eingegeben wurde, und zwar je Feld. `resolvePositionSettings` in `tax/summary.ts` setzt die Werte für ein Jahr zusammen: Fondstyp aus `fundTypes`, sonst der Standard nach Assetklasse; jedes Kursfeld aus `prices[Jahr][Position]`, sonst die Vorbelegung dieses Jahres (letzter Kurs aus dem Export bis zum 31.12. des Jahres). Ein geleertes Feld bleibt leer und fällt nicht auf die Vorbelegung zurück; die Oberfläche fordert dann wie bisher zur Eingabe auf.
+- `buildTaxSummary(transactions, year, inputs, saleCredits)` nimmt diesen Zustand statt der bisherigen Positionseinstellungen entgegen. `TaxRow.settings` enthält weiterhin die für das gewählte Jahr aufgelösten Werte; Steuerreiter und PDF lesen sie wie zuvor.
+- Die Eingaben angesetzter Vorabpauschalen je Verkauf bleiben ein eigener Zustand (Schlüssel: Buchung des Verkaufs) und sind unverändert.
+
+### Oberfläche und PDF
+
+- Der Steuerreiter meldet Änderungen als Aktion. Das Jahr einer Kursaktion ist das Jahr der angezeigten Zusammenfassung, also das Jahr aus der Feldbeschriftung („Kurs 01.01.2026 (€)“).
+- Der Hinweis unter „So wird gerechnet“ (auch im PDF) lautet jetzt: vorbelegt ist der letzte Kurs aus dem Export bis zum Ende des Steuerjahres; eingetragene Kurse gelten nur für das gewählte Steuerjahr, der Fondstyp gilt für alle Jahre.
+- Die PDF-Fußnote je Position nennt das Jahr: „Kurs 01.01.2026: … € · Kurs 31.12.2026: … €“ statt „Kurs 01.01.: … €“. Der PDF-Export nutzt wie die Ansicht die Zusammenfassung des gewählten Jahres.
+- Die Kacheln Vorabpauschale, Steuerpflichtig und Geschätzte Steuer haben eigene `data-testid` (`tax-vorabpauschale`, `tax-taxable`, `tax-estimated-tax`) für den E2E-Test. Sichtbar ändert sich an ihnen nichts.
+- Der README-Screenshot `docs/screenshots/steuer.png` ist neu erzeugt, weil er den Rechenhinweis zeigt. Verfahren wie am 06.10.2026: Trade-Republic-Testdatei, Viewport 1280 px, Skalierung 1,5, ETF-Kurs 31.12. auf 95,00 €. Gegenüber dem alten Bild unterscheidet sich nur der letzte Hinweis; Größe 1656 × 1577 Pixel wie zuvor.
+
+### Tests
+
+Unit-Tests in `tax-inputs.test.ts` (13 Tests). Testdaten: Kauf 10 @ 100 € am 03.03.2025, Kauf 5 @ 110 € am 15.01.2026. Handrechnungen:
+
+| Fall | Rechnung | Erwartung |
+|---|---|---|
+| ohne Eingabe | Vorbelegung: letzter Kurs bis Ende 2025 bzw. 2026 | 2025: 100,00 / 100,00; 2026: 110,00 / 110,00; Vorabpauschale in beiden Jahren 0 € |
+| 2026: 105 → 125, Aktienfonds | 10 × 105 × 3,2 % × 0,7 = 23,52; 5 × 105 × 3,2 % × 0,7 = 11,76 (Januarkauf, kein Monat entfällt); Wertzuwachs 15 × 20 = 300 deckelt nicht | Vorabpauschale 35,28 €, steuerpflichtig 35,28 × 0,7 = 24,696 €, Steuer 24,696 × 26,375 % = 6,51357 € |
+| 2025: 01.01. vorbelegt 100, 31.12. eingegeben 110, Aktienfonds | 10 × 100 × 2,53 % × 0,7 = 17,71; Kauf im März, 2 Monate entfallen: × 10/12 = 14,7583; Wertzuwachs 10 × 10 = 100 deckelt nicht | Vorabpauschale 14,7583 €, steuerpflichtig 10,3308 €, Steuer 2,7248 € |
+| Fondstyp Mischfonds, Kurse wie oben | Teilfreistellung 15 % | 2026: steuerpflichtig 35,28 × 0,85 = 29,988 €, Steuer 7,909335 €; 2025: 12,5446 €, Steuer 3,3086 € |
+| Verkauf 10 @ 120 € im Jahr 2026 aus Kauf 10 @ 100 € im Jahr 2025, angesetzte Vorabpauschalen 25,30 € | 10 × (120 − 100) − 25,30 | 174,70 € ohne Kurseingaben, mit Kurseingaben und mit Mischfonds |
+
+Weitere Fälle: Kurse für 2026 ändern 2025 nicht; die Eingaben beider Jahre bleiben beim Wechsel erhalten, ein nicht eingegebenes Feld bleibt bei der Vorbelegung seines Jahres; der Fondstyp gilt für 2025 und 2026 und legt keinen Kurs fest; ein geleertes Feld bleibt leer (keine Schätzung), nur im betroffenen Jahr; Eingaben betreffen nur die eigene Position; der Reducer verändert den vorigen Zustand nicht, `reset` liefert den leeren Zustand; PDF-Fußnote und Kachel nennen die Kurse und Summen des gewählten Jahres (2025: 100,00 € und 110,00 €, Vorabpauschale 14,76 €; 2026: 105,00 € und 125,00 €, Vorabpauschale 35,28 €, Steuer 6,51 €).
+
+`sale-credit.test.ts` und `export.test.ts` übergeben jetzt den neuen Zustand statt der Positionseinstellungen; ihre Erwartungswerte sind unverändert.
+
+E2E „Kurse im Steuerreiter gelten je Steuerjahr, der Fondstyp für alle Jahre, Andere Datei setzt beides zurück“ mit denselben zwei Käufen als Scalable-CSV:
+
+1. 2026: Felder 110,00 / 110,00, Kacheln 0,00 €.
+2. Eingabe 105,00 / 125,00: Vorabpauschale 35,28 €, steuerpflichtig 24,70 €, Steuer 6,51 €.
+3. Wechsel auf 2025: Felder 100,00 / 100,00 (Vorbelegung 2025, nicht die Werte aus 2026), Kacheln 0,00 €.
+4. Eingabe Kurs 31.12.2025 = 110,00: 14,76 €, 10,33 €, 2,72 €.
+5. Zurück auf 2026: Felder 105,00 / 125,00, Kacheln 35,28 €, 24,70 €, 6,51 €.
+6. Fondstyp Mischfonds: 35,28 €, 29,99 €, 7,91 €.
+7. Wechsel auf 2025: Fondstyp Mischfonds, Felder 100,00 / 110,00, Kacheln 14,76 €, 12,54 €, 3,31 €.
+8. „Andere Datei“, dieselbe Datei erneut laden, Steuerreiter: 2026 Fondstyp Aktienfonds, Felder 110,00 / 110,00, Kacheln 0,00 €; 2025 Fondstyp Aktienfonds, Felder 100,00 / 100,00, Kacheln 0,00 €. Das sind die Vorbelegungen aus Schritt 1 und 3.
+
+Die Kacheln werden über ihre `data-testid` angesprochen und auf Beschriftung und Betrag am Anfang der Kachel geprüft, damit etwa „10,00 €“ nicht als „0,00 €“ durchgeht. Gegen den alten Stand wurde der E2E-Test nicht ausgeführt; nach dem Befund vom 06.10.2026 hätte Schritt 3 dort 105,00 / 125,00 gezeigt.
+
+Der E2E-Test „Angesetzte Vorabpauschalen mindern den Veräußerungsgewinn, Andere Datei setzt sie zurück“ prüft dasselbe für die Eingabe je Verkauf: nach 25,30 € (Gewinn 174,70 €), „Andere Datei“ und erneutem Laden ist das Feld leer und der Gewinn wieder 10 × (120 − 100) = 200,00 €. Die Buchungsschlüssel (`sc-<Zeile>`) sind bei derselben Datei gleich, eine vergessene Rücksetzung würde den alten Betrag also wieder abziehen.
+
+Zurückgesetzt wird an zwei Stellen in `DepotDoktorApp.tsx`: in `reset` („Andere Datei“) und in `loadText`. Das Dateifeld gibt es nur in der Ansicht ohne Report, und aus dem Report führt nur „Andere Datei“ dorthin. Eine zweite Datei lässt sich also nicht laden, ohne vorher `reset` auszulösen; die Rücksetzung in `loadText` ist über die Oberfläche nicht getrennt beobachtbar und bleibt als Absicherung stehen. Mutationsprüfung in einer Kopie außerhalb des Repos (nur die beiden E2E-Tests mit „Andere Datei“, ohne Wiederholungen, `next build` und `next start`):
+
+| Mutation | Ergebnis |
+|---|---|
+| unverändert | grün |
+| Rücksetzung der Steuereingaben in `reset` und `loadText` entfernt | rot: Fondstyp „mixed“ statt „equity“ |
+| nur in `reset` entfernt | grün (`loadText` setzt zurück) |
+| nur in `loadText` entfernt | grün (`reset` setzt zurück) |
+| `setSaleCredits({})` in `reset` und `loadText` entfernt | rot: Feld zeigt „25,30“ statt leer |
+
+### Prüfergebnisse
+
+Lokal unter Windows 11 mit Node 22.23.2, pnpm 10.34.5 und Chromium Headless Shell 1234. Alle Schritte liefen über die pnpm-Skripte, die E2E-Tests mit dem Serverstart aus `playwright.config.ts` (`pnpm start`).
+
+| Schritt | vor den Änderungen | nach den Änderungen |
+|---|---|---|
+| `pnpm install --frozen-lockfile` | grün | grün |
+| `pnpm typecheck` | nicht erneut gemessen | grün |
+| `pnpm lint` | nicht erneut gemessen | grün |
+| `pnpm test` | 155 Tests grün (csv 50, pdf 1, web 104) und 1 offener `todo` | 168 Tests grün (csv 50, pdf 1, web 117) und 1 offener `todo` |
+| `pnpm build` | nicht erneut gemessen | grün |
+| `pnpm test:e2e` mit `CI=true`, `E2E_SERVER=start` | nicht erneut gemessen (06.10.2026: 10 Tests grün) | 11 Tests grün |
+
+axe-core lief nicht erneut; am Markup des Steuerreiters kamen nur `data-testid`-Attribute hinzu.
