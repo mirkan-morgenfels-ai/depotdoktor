@@ -1,6 +1,7 @@
 import { parseDecimal, type Transaction } from "@portfolio/csv";
 import { Decimal, ZERO, d } from "../money";
 import { basiszinsFor, type FundType } from "./constants";
+import { EMPTY_TAX_INPUTS, type TaxInputs } from "./inputs";
 import {
   buildTaxPositions,
   estimatePositionVorabpauschale,
@@ -57,6 +58,16 @@ export function defaultPositionSettings(position: TaxPosition): PositionSettings
   return { fundType, yearStartPrice: price, yearEndPrice: price };
 }
 
+export function resolvePositionSettings(position: TaxPosition, year: number, inputs: TaxInputs): PositionSettings {
+  const defaults = defaultPositionSettings(position);
+  const prices = inputs.prices[year]?.[position.key];
+  return {
+    fundType: inputs.fundTypes[position.key] ?? defaults.fundType,
+    yearStartPrice: prices?.yearStartPrice ?? defaults.yearStartPrice,
+    yearEndPrice: prices?.yearEndPrice ?? defaults.yearEndPrice,
+  };
+}
+
 export function parsePriceInput(value: string): Decimal | null {
   const parsed = parseDecimal(value, "comma");
   return parsed === null ? null : d(parsed);
@@ -78,12 +89,12 @@ export function buildSaleRow(sale: TaxSale, fundType: FundType, creditInput: str
 export function buildTaxSummary(
   transactions: readonly Transaction[],
   year: number,
-  settings: Readonly<Record<string, PositionSettings>>,
+  inputs: TaxInputs = EMPTY_TAX_INPUTS,
   saleCredits: SaleCreditInputs = {},
 ): TaxSummary {
   const positions = buildTaxPositions(transactions, year);
   const rows: TaxRow[] = positions.map((position) => {
-    const current = settings[position.key] ?? defaultPositionSettings(position);
+    const current = resolvePositionSettings(position, year, inputs);
     const start = parsePriceInput(current.yearStartPrice);
     const end = parsePriceInput(current.yearEndPrice);
     const estimate =
@@ -112,5 +123,5 @@ export const TAX_METHOD_NOTES = [
   "Steuerpflichtig = Vorabpauschale × (1 − Teilfreistellung). Steuer = 26,375 % (Kapitalertragsteuer plus Solidaritätszuschlag), ohne Kirchensteuer.",
   "Veräußerungsgewinn nach FIFO. Werden Fondsanteile aus einem Vorjahr verkauft, können die für diese Anteile bereits angesetzten Vorabpauschalen eingetragen werden; sie mindern den Gewinn in voller Höhe, ohne Teilfreistellung (§ 19 Abs. 1 Satz 3 und 4 InvStG). Ohne Eingabe wird nichts abgezogen.",
   "Der Sparerpauschbetrag (1.000 € bzw. 2.000 €) und Verlusttöpfe sind nicht berücksichtigt.",
-  "Die Kurse am 01.01. und 31.12. stehen nicht im Export; vorbelegt ist der letzte Kurs aus dem Export. Für eine belastbare Schätzung die Rücknahmepreise der Fondsgesellschaft eintragen.",
+  "Die Kurse am 01.01. und 31.12. stehen nicht im Export; vorbelegt ist der letzte Kurs aus dem Export bis zum Ende des Steuerjahres. Eingetragene Kurse gelten nur für das gewählte Steuerjahr, der Fondstyp gilt für alle Jahre. Für eine belastbare Schätzung die Rücknahmepreise der Fondsgesellschaft eintragen.",
 ];

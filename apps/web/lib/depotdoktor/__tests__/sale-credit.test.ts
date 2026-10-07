@@ -5,14 +5,9 @@ import { parseBrokerCsv, type Transaction } from "@portfolio/csv";
 import { d } from "../money";
 import { createLot, fifoSell } from "../tax/fifo";
 import { buildTaxPositions, type TaxSale } from "../tax/positions";
-import {
-  buildSaleRow,
-  buildTaxSummary,
-  defaultPositionSettings,
-  parseCreditInput,
-  type PositionSettings,
-  type SaleCreditInputs,
-} from "../tax/summary";
+import type { FundType } from "../tax/constants";
+import { EMPTY_TAX_INPUTS, type TaxInputs } from "../tax/inputs";
+import { buildSaleRow, buildTaxSummary, defaultPositionSettings, parseCreditInput, type SaleCreditInputs } from "../tax/summary";
 import { buildReport } from "../report";
 import { buildReportPdfData } from "../pdf-data";
 
@@ -41,8 +36,11 @@ const transactions = [
   tx({ id: "sell-2026", date: "2026-05-04", type: "sell", amount: "1800", shares: "15", price: "120" }),
 ];
 
-function settings(fundType: PositionSettings["fundType"] = "equity"): Record<string, PositionSettings> {
-  return { IE00TEST0001: { fundType, yearStartPrice: "110,00", yearEndPrice: "120,00" } };
+function settings(fundType: FundType = "equity"): TaxInputs {
+  return {
+    fundTypes: { IE00TEST0001: fundType },
+    prices: { 2026: { IE00TEST0001: { yearStartPrice: "110,00", yearEndPrice: "120,00" } } },
+  };
 }
 
 function credits(credit: string): SaleCreditInputs {
@@ -115,7 +113,7 @@ describe("Angesetzte Vorabpauschalen beim Verkauf (§ 19 Abs. 1 Satz 3 und 4 Inv
     const path = fileURLToPath(new URL("../../../../../packages/csv/fixtures/traderepublic-synthetic.csv", import.meta.url));
     const parsed = parseBrokerCsv(readFileSync(path, "utf8"));
     if (!parsed.ok) throw new Error(parsed.error);
-    const summary = buildTaxSummary(parsed.transactions, 2026, {});
+    const summary = buildTaxSummary(parsed.transactions, 2026);
     expect(summary.rows[0]?.sales[0]?.creditAllowed).toBe(false);
     expect(summary.totals.realizedGain.toFixed(2)).toBe("78.60");
   });
@@ -143,11 +141,11 @@ describe("Angesetzte Vorabpauschalen beim Verkauf (§ 19 Abs. 1 Satz 3 und 4 Inv
   test("Eingabe ändert die Positionseinstellungen nicht: 2025 bleibt bei Kurs 100,00, 2026 bei 120,00", () => {
     const entered = credits("12,34");
     const [position2025] = buildTaxPositions(transactions, 2025);
-    const row2025 = buildTaxSummary(transactions, 2025, {}, entered).rows[0]!;
+    const row2025 = buildTaxSummary(transactions, 2025, EMPTY_TAX_INPUTS, entered).rows[0]!;
     expect(row2025.settings).toEqual(defaultPositionSettings(position2025!));
     expect(row2025.settings).toEqual({ fundType: "equity", yearStartPrice: "100,00", yearEndPrice: "100,00" });
     expect(row2025.sales).toHaveLength(0);
-    const row2026 = buildTaxSummary(transactions, 2026, {}, entered).rows[0]!;
+    const row2026 = buildTaxSummary(transactions, 2026, EMPTY_TAX_INPUTS, entered).rows[0]!;
     expect(row2026.settings).toEqual({ fundType: "equity", yearStartPrice: "120,00", yearEndPrice: "120,00" });
     expect(row2026.sales[0]?.gain.toFixed(2)).toBe("237.66");
   });

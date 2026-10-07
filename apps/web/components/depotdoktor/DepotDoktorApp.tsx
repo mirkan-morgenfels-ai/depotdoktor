@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useState, type KeyboardEvent } from "react";
+import { useCallback, useMemo, useReducer, useState, type KeyboardEvent } from "react";
 import { decodeCsvBytes, detectFileKind, parseBrokerCsv, FILE_KIND_MESSAGES, type ParseSuccess } from "@portfolio/csv";
 import { Disclaimer } from "@portfolio/legal";
 import { Button } from "@portfolio/ui";
 import { buildReport } from "@/lib/depotdoktor/report";
 import { SAMPLE_CSV_SCALABLE } from "@/lib/depotdoktor/sample";
-import { buildTaxSummary, type PositionSettings, type SaleCreditInputs } from "@/lib/depotdoktor/tax/summary";
+import { buildTaxSummary, type SaleCreditInputs } from "@/lib/depotdoktor/tax/summary";
+import { EMPTY_TAX_INPUTS, taxInputsReducer } from "@/lib/depotdoktor/tax/inputs";
 import { buildReportPdfData, BROKER_LABELS } from "@/lib/depotdoktor/pdf-data";
 import { transactionsToCsv } from "@/lib/depotdoktor/export-csv";
 import { downloadBlob, timestampForFilename } from "@/lib/depotdoktor/download";
@@ -37,20 +38,20 @@ export function DepotDoktorApp() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabId>("performance");
   const [taxYear, setTaxYear] = useState<number>(TAX_YEARS[0] ?? 2026);
-  const [taxSettings, setTaxSettings] = useState<Record<string, PositionSettings>>({});
+  const [taxInputs, dispatchTaxInput] = useReducer(taxInputsReducer, EMPTY_TAX_INPUTS);
   const [saleCredits, setSaleCredits] = useState<SaleCreditInputs>({});
 
   const transactions = useMemo(() => parsed?.transactions ?? [], [parsed]);
   const report = useMemo(() => (parsed ? buildReport(transactions) : null), [parsed, transactions]);
   const taxSummary = useMemo(
-    () => buildTaxSummary(transactions, taxYear, taxSettings, saleCredits),
-    [transactions, taxYear, taxSettings, saleCredits],
+    () => buildTaxSummary(transactions, taxYear, taxInputs, saleCredits),
+    [transactions, taxYear, taxInputs, saleCredits],
   );
 
   function loadText(text: string, name: string) {
     const result = parseBrokerCsv(text);
     setFileName(name);
-    setTaxSettings({});
+    dispatchTaxInput({ type: "reset" });
     setSaleCredits({});
     if (result.ok) {
       setParsed(result);
@@ -105,18 +106,9 @@ export function DepotDoktorApp() {
     setParsed(null);
     setError(null);
     setFileName(null);
-    setTaxSettings({});
+    dispatchTaxInput({ type: "reset" });
     setSaleCredits({});
   }
-
-  const updateTaxSettings = useCallback(
-    (positionKey: string, patch: Partial<PositionSettings>) => {
-      const row = taxSummary.rows.find((r) => r.position.key === positionKey);
-      if (!row) return;
-      setTaxSettings((prev) => ({ ...prev, [positionKey]: { ...(prev[positionKey] ?? row.settings), ...patch } }));
-    },
-    [taxSummary],
-  );
 
   const updateSaleCredit = useCallback((saleId: string, value: string) => {
     setSaleCredits((prev) => ({ ...prev, [saleId]: value }));
@@ -222,7 +214,7 @@ export function DepotDoktorApp() {
           <TaxTab
             summary={taxSummary}
             onYearChange={setTaxYear}
-            onSettingsChange={updateTaxSettings}
+            onInputChange={dispatchTaxInput}
             onCreditChange={updateSaleCredit}
           />
         ) : null}
