@@ -107,7 +107,7 @@ Stand 07.10.2026: siehe README („Tests“) und `docs/verifikation.md` (Abschni
 
 ## Offene Entscheidungen
 
-- Kicker „Projekt K1/K2/K3“ auf Start- und Projektseite.
+- ~~Kicker „Projekt K1/K2/K3“ auf Start- und Projektseite.~~ Entschieden am 08.10.2026: „Projekt 01/02/03“ wie auf den Projektkarten.
 - Impressum ohne ladungsfähige Anschrift (`docs/verifikation.md`, Rechtstexte Punkt 1).
 - Standard-Fondstyp bei Positionen ohne Assetklasse (derzeit Aktienfonds) und Vorbelegung des Steuerjahres.
 - Normangabe im Disclaimer behalten oder nur auf das BaFin-Merkblatt verweisen.

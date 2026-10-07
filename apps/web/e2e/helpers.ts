@@ -22,6 +22,9 @@ export function originOf(baseURL: string | undefined): string {
 }
 
 export async function axeViolations(page: Page): Promise<string[]> {
+  await page.waitForFunction(() =>
+    document.getAnimations().every((animation) => !(animation instanceof CSSTransition) || animation.playState !== "running"),
+  );
   await page.addScriptTag({ content: AXE_SOURCE });
   return page.evaluate(async (tags) => {
     const result = await (window as unknown as AxeWindow).axe.run(document, { runOnly: { type: "tag", values: tags } });
