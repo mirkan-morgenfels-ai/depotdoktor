@@ -31,9 +31,9 @@ export async function axeViolations(page: Page): Promise<string[]> {
 
 export function watchErrors(page: Page): string[] {
   const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
+  page.on("pageerror", (error) => errors.push(`pageerror: ${error.message} (${page.url()})`));
   page.on("console", (message) => {
-    if (message.type() === "error") errors.push(`console: ${message.text()}`);
+    if (message.type() === "error") errors.push(`console: ${message.text()} (${page.url()})`);
   });
   return errors;
 }

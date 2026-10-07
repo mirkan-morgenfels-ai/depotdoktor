@@ -55,7 +55,7 @@ export function ScrollRegion({ label, className, testId, children }: ScrollRegio
           />
         ) : null}
       </div>
-      {overflowing ? <p className="mt-2 text-xs text-muted sm:hidden">Tabelle seitlich wischen</p> : null}
+      {overflowing ? <p className="mt-2 text-xs text-slate sm:hidden">Tabelle seitlich wischen</p> : null}
     </div>
   );
 }
