@@ -502,3 +502,29 @@ Lokal unter Windows 11 mit Node 22.23.2, pnpm 10.34.5 und Chromium Headless Shel
 | `pnpm test` | 235 Tests grün (csv 50, pdf 2, web 183) und 1 offener `todo` |
 | `pnpm build` | grün |
 | `pnpm test:e2e` mit `CI=true` | 28 Tests grün (`depotdoktor.spec.ts` 14, `site.spec.ts` 14), darin axe-core bei 390, 768 und 1280 px ohne Verstöße |
+
+## Oberfläche „Navy & Gold“ 07.10.2026
+
+Neugestaltung der Oberfläche (Kopf, Hero, Fuß, Startseite, Reiter, Kacheln, Tabellen, Rechtsseiten, Statusseiten, PDF-Farben) in der Familie mit KontoKlar und NetzRadar. Rechenwerte, Parser, Steuerlogik und Kennzahlen sind unverändert (`apps/web/lib/depotdoktor`, `packages/csv` und `packages/legal` ohne Änderung); Rechtstexte inhaltlich unverändert.
+
+Nur die Darstellung betreffen:
+
+- Kennzahl-Kacheln setzen die Einheit („%“, „€“, „% p. a.“) kleiner neben die Zahl. Der Text bleibt zeichengleich (`splitValueUnit` in `packages/ui/src/value-unit.ts`, Unit-Test `value-unit.test.ts`: Zahl und Einheit ergeben wieder den Ausgangswert). PDF und CSV sind nicht betroffen.
+- Im Steuerreiter stehen in Normangaben, Beträgen mit „€“ und „%“ sowie in „1.000 € / 2.000 €“ geschützte Leerzeichen (`keepTogether` in `TaxTab.tsx`), damit „§“ und Zahl nicht getrennt umbrechen. Die Texte aus `tax/summary.ts` werden dafür nur bei der Anzeige umgesetzt.
+- Fehlen Kurse, steht über den Steuerkacheln ein Hinweis mit Sprungmarke zur ersten Position ohne Kurs.
+- Fehlermeldungen beim Einlesen stehen direkt unter der Ablagefläche und werden ins Bild gescrollt.
+
+### Prüfergebnisse
+
+Lokal unter Windows 11 mit Node 22.23.2, pnpm 10.34.5 und Chromium Headless Shell 1234, E2E mit `CI=true` gegen `next start` auf Port 3401.
+
+| Schritt | Ergebnis |
+|---|---|
+| `pnpm install --frozen-lockfile` | grün |
+| `pnpm typecheck` (einschließlich E2E-Dateien) | grün |
+| `pnpm lint` (alle sechs Pakete) | grün |
+| `pnpm test` | 238 Tests grün (csv 50, pdf 2, web 186) und 1 offener `todo` |
+| `pnpm build` | grün |
+| `pnpm test:e2e` mit `CI=true` | 29 Tests grün (`depotdoktor.spec.ts` 15, `site.spec.ts` 14), darin axe-core bei 390, 768 und 1280 px ohne Verstöße und die Reiter bei 320 px vollständig im Bild |
+
+Die README-Screenshots (`docs/screenshots/performance.png`, `steuer.png`) sind neu erzeugt: Playwright gegen `next start`, Viewport 1280 px, Skalierung 1,5, Beispieldatei, im Steuerreiter Beispielkurse für den ETF (Kurs 01.01.2026: 80,00 €, Kurs 31.12.2026: 95,00 €).

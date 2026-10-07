@@ -79,14 +79,20 @@ Stand 07.10.2026: Parser, Kennzahlen, Steuermodul, Report mit PDF- und CSV-Expor
 - script-src enthält unsafe-inline, weil Next.js beim statischen Prerendering Inline-Skripte erzeugt; die Seite rendert keine Nutzereingaben ins DOM, Risiko gering; wasm-unsafe-eval für den PDF-Renderer. Keine Nonce-CSP, sie würde alle Seiten dynamisch machen.
 - Keine externen Schriften, Skripte, Fetches, Cookies, localStorage oder Tracker. Änderungen an dem, was die Seite lädt oder überträgt, ziehen Änderungen an der Datenschutzerklärung und am README-Abschnitt „Datenschutz“ nach sich.
 - E2E-Wächter: Nach dem Laden der Projektseite sind nur GET-Anfragen an denselben Server auf `/_next/static/` oder mit `_rsc` erlaubt, keine Anfrage enthält Dateiinhalte.
-- Skip-Link auf `#main`, Fokusring in `gold-deep`, `prefers-reduced-motion` wird respektiert, `lang="de"`, aktiver Navigationslink mit `aria-current="page"`. Waagrecht scrollbare Tabellen liegen in `ScrollRegion` (`role="region"`, `tabIndex={0}`, Name). axe-core (WCAG 2.x A und AA, Best Practices) bei 390, 768 und 1280 px ohne Verstöße; bei 320 px kein waagrechter Überlauf.
+- Skip-Link auf `#main`, Fokusring 2 px in `gold-deep` auf Hell und `gold-light` auf Navy, `prefers-reduced-motion` wird respektiert, `lang="de"`, aktiver Navigationslink mit `aria-current="page"`. Waagrecht scrollbare Tabellen liegen in `ScrollRegion` (`role="region"`, `tabIndex={0}`, Name). axe-core (WCAG 2.x A und AA, Best Practices) bei 390, 768 und 1280 px ohne Verstöße; bei 320 px kein waagrechter Überlauf.
 
 ## Design
 
-- Kein Blau, nirgends, auch nicht in Diagrammen, SVGs, Vorschaubild oder Apple-Icon.
-- Palette (Tokens in `apps/web/app/globals.css`, Diagrammfarben in `packages/charts/src/theme.ts`, PDF-Farben in `packages/pdf/src/ReportDocument.tsx`): ink #111111, paper #fbfaf6, surface #ffffff, gold #b8912f, gold-deep #7d5f17 (Gold für Text und Fokus), gold-soft #f3e9c9, green #2f6b3a, green-soft #dfeadf, bordeaux #7a1f2b, bordeaux-soft #f1dcdf, muted #6b6b66, line #e3e0d6. Gleiche Hex-Werte wie K2/K3, abweichende Namen (green=moss, bordeaux=wine, muted=stone).
-- Gold (#b8912f) nur für Flächen, Linien und Rahmen; Text und Fokusringe in gold-deep.
-- Zahlen mit deutschem Dezimalkomma und `tabular-nums`. Lieber mehr Weißraum als gedrängt.
+- Leitbild „Navy & Gold“ (Private Banking trifft Datenprodukt), gemeinsam mit K2 und K3: dunkler Rahmen in Navy (Kopf, Hero, Fuß, Statusseiten), helle Arbeitsflächen in Elfenbein (Upload, Report, Tabellen, Rechtsseiten), feine Goldlinien, große Serifenzahlen, viel Weißraum. Blau ist erlaubt.
+- Tokens in `apps/web/app/globals.css` (`@theme`): navy-950 #0b1626, navy-900 #101f35, navy-800 #16273f, navy-700 #26354d, navy-300 #8f9bb0, ivory #f7f3ea, surface #fffdf8, line #e4ddcc, line-strong #858d9b (Formular- und Konturränder), ink #0f1b2d, slate #5b6474, gold #c9a548, gold-light #d8bd72, gold-deep #7d5f17, gold-soft #f3e9c9, moss #2f6b3a, moss-light #93c9a0, moss-soft #dfeadf, wine #7a1f2b, wine-light #e39aa4, wine-soft #f1dcdf, sky #3e6a9e. Alte Namen leben als Aliase weiter (paper = ivory, muted = slate, green = moss, bordeaux = wine).
+- Diagrammfarben in `packages/charts/src/theme.ts`, feste Reihenfolge navy #1d3a5f, gold #b8912f, moss, wine, sky, slate, sand #c9b98f; Gewinn immer moss, Verlust immer wine; Sky ist die einzige mittlere Blau-Datenfarbe. PDF-Farben in `packages/pdf/src/ReportDocument.tsx` (Kopfband navy, Überzeile gold-deep).
+- Gold als Text nur gold-light (auf Navy) oder gold-deep (auf Hell); gold #c9a548 nur für Linien, Ränder, Flächen und Buttons auf Navy.
+- Schriften über `next/font/google` (`apps/web/app/fonts.ts`, beim Build selbst gehostet, keine Laufzeitanfrage): Cormorant Garamond 500 als Display (`.display`, Akzentwörter kursiv), Inter für UI und Fließtext. Eyebrows 11 px, Großbuchstaben, `letter-spacing .16em`. Zahlen mit deutschem Dezimalkomma; `tabular-nums` nur in rechtsbündigen Tabellenzellen, `.num` und Kacheln, sonst `lining-nums`.
+- Bausteine in `apps/web/components/site/` (Kopf, Fuß, Brand, Navigation, HomeHero, ProjectHero, ProjectCards, SectionHeader, PillTabs, StatusPage, LegalNav, Buttons) und `packages/ui` (StatTile, Button, Card) sind in K1, K2 und K3 gleich; Projektspezifisches nur über `lib/site.ts`, Props und `motif.tsx`.
+- Kopf mobil nicht klebend (erst ab 640 px sticky), ab 768 px einzeilig. Reiter unter 380 px als 2×2-Raster. Kacheln ab 360 px zweispaltig; Einheiten in Kacheln kleiner neben der Zahl (Text zeichengleich).
+- Zeilenlänge im Fließ- und Kleingedruckten etwa 70 Zeichen (Breite am Textelement begrenzen).
+- Fokus: 2 px Outline, gold-light auf Navy, gold-deep auf Hell, Radius folgt dem Element (Links 6 px, Pillen rund); keine `ring-*`-Utilities. Skip-Link als Gold-Pille, `prefers-reduced-motion` schaltet Animationen ab.
+- Kontraste (nachgerechnet): navy-300 auf navy-950 6,5:1; gold-light auf navy-950 9,9:1; slate und gold-deep auf ivory 5,4:1; Gold-Button 7,7:1; Konturränder gold/70 auf navy-950 4,4:1, line-strong auf surface 3,3:1 und auf ivory 3,0:1; wine auf wine-soft 7,8:1; gold-deep auf gold-soft 4,9:1.
 
 ## Test-Stand
 
