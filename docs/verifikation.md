@@ -86,7 +86,7 @@ Behoben:
 
 Nicht geändert, von Dennis zu entscheiden:
 
-1. ~~**„Quelloffen“ und „auf GitHub“.**~~ Erledigt am 06.10.2026: Startseite, Impressum, Datenschutzerklärung und Nutzungsbedingungen sagen nur noch, dass der Quellcode unter der MIT-Lizenz steht, ohne Behauptung öffentlicher Einsehbarkeit („zur Verfügung“, „quelloffen“, „auf GitHub“) und ohne Repo-Link. Ob das Repository `mirkan-morgenfels-ai/AI-Project-1` öffentlich gestellt wird, entscheidet weiterhin Dennis; danach könnte ein Link ergänzt werden.
+1. ~~**„Quelloffen“ und „auf GitHub“.**~~ Erledigt am 06.10.2026: Startseite, Impressum, Datenschutzerklärung und Nutzungsbedingungen sagen nur noch, dass der Quellcode unter der MIT-Lizenz steht, ohne Behauptung öffentlicher Einsehbarkeit („zur Verfügung“, „quelloffen“, „auf GitHub“) und ohne Repo-Link. Seit 07.10.2026 ist der Code öffentlich unter `mirkan-morgenfels-ai/depotdoktor` (bereinigte Historie; das frühere private Repo `AI-Project-1` bleibt als Archiv).
 2. **Steuerjahr-Vorbelegung.** Der Reiter Steuer startet mit 2026, obwohl das Jahr läuft; der Kurs 31.12.2026 existiert noch nicht. Alternative: letztes abgeschlossenes Jahr oder Jahr der letzten Buchung vorbelegen.
 3. ~~**Max Drawdown nach Vollverkauf.**~~ Erledigt am 06.10.2026, Begründung und Testfälle im Abschnitt „Lückenschluss 06.10.2026“.
 4. **Standardwerte im Steuerreiter.** Kurs 01.01. und 31.12. sind mit demselben Wert vorbelegt, damit ist die Vorabpauschale ohne Eingabe immer 0 €. Die Kacheln zeigen 0,00 € statt „Kurse fehlen“. Bewusst so gelassen, weil das Umsetzungsdokument Nutzereingabe vorsieht; eine Kennzeichnung „vorläufig“ wäre möglich.
