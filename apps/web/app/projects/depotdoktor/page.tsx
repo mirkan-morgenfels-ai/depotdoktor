@@ -53,7 +53,7 @@ export default function DepotDoktorPage() {
   return (
     <>
       <ProjectHero
-        eyebrow={`${project?.kicker ?? "Projekt K1"} · ${project?.topic ?? "Finanzdaten"}`}
+        eyebrow={`${project?.kicker ?? "Projekt 01"} · ${project?.topic ?? "Finanzdaten"}`}
         title={
           <>
             Depot<em className="text-gold-light">Doktor</em>
