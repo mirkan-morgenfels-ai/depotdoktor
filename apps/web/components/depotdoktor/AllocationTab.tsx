@@ -1,7 +1,10 @@
 import type { PerformanceReport } from "@/lib/depotdoktor/report";
-import type { AllocationSlice } from "@/lib/depotdoktor/metrics/allocation";
+import { ASSET_CLASS_LABELS, type AllocationSlice } from "@/lib/depotdoktor/metrics/allocation";
 import { AllocationBars } from "@portfolio/charts";
 import { d, formatEur, formatNumber, formatPercent } from "@/lib/depotdoktor/money";
+import { ScrollRegion } from "./ScrollRegion";
+
+export const UNASSIGNED_HINT = "Der Export enthält keine Assetklasse";
 
 function AllocationList({ title, slices, testId }: { title: string; slices: AllocationSlice[]; testId: string }) {
   return (
@@ -27,6 +30,11 @@ function AllocationList({ title, slices, testId }: { title: string; slices: Allo
               ))}
             </tbody>
           </table>
+          {slices.some((slice) => slice.label === ASSET_CLASS_LABELS.unknown) ? (
+            <p className="mt-3 text-xs text-muted" data-testid="allocation-unassigned-hint">
+              {ASSET_CLASS_LABELS.unknown}: {UNASSIGNED_HINT}.
+            </p>
+          ) : null}
         </>
       )}
     </section>
@@ -42,7 +50,7 @@ export function AllocationTab({ report }: { report: PerformanceReport }) {
       </div>
       <section className="rounded-lg border border-line bg-surface p-6">
         <h2 className="mb-4 font-serif text-xl">Offene Positionen</h2>
-        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tabelle offene Positionen">
+        <ScrollRegion label="Tabelle offene Positionen">
           <table className="w-full text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-muted">
               <tr>
@@ -67,7 +75,7 @@ export function AllocationTab({ report }: { report: PerformanceReport }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
         <p className="mt-3 text-xs text-muted">
           Die Region folgt dem Ländercode der ISIN, also dem Fondsdomizil oder Sitz des Emittenten, nicht der Anlageregion des
           Fonds.

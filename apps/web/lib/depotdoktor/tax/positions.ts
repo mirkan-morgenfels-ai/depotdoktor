@@ -12,6 +12,7 @@ export interface TaxLot {
   month: number;
   shares: Decimal;
   costPerShare: Decimal;
+  distributionsPerShareInYear: Decimal;
 }
 
 export interface TaxPosition {
@@ -24,6 +25,9 @@ export interface TaxPosition {
   lotsBoughtInYear: TaxLot[];
   sharesAtYearEnd: Decimal;
   distributionsInYear: Decimal;
+  distributionsOnYearEndHoldings: Decimal;
+  priceBeforeYear: Decimal | null;
+  priceBeforeYearDate: string | null;
   lastKnownPrice: Decimal | null;
   lastKnownPriceDate: string | null;
   salesInYear: TaxSale[];
@@ -51,12 +55,23 @@ export interface PositionTaxEstimate {
   tax: Decimal;
 }
 
+function sumShares(lots: readonly Pick<Lot, "shares">[]): Decimal {
+  return lots.reduce((acc, l) => acc.plus(l.shares), ZERO);
+}
+
+function distributionsOnLots(lots: readonly Pick<Lot, "shares" | "distributionsPerShareInYear">[]): Decimal {
+  return lots.reduce((acc, l) => acc.plus(l.shares.times(l.distributionsPerShareInYear)), ZERO);
+}
+
 export function buildTaxPositions(transactions: readonly Transaction[], year: number): TaxPosition[] {
   const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date) || a.rowIndex - b.rowIndex);
   const state = new Map<
     string,
     {
-      position: Omit<TaxPosition, "sharesAtYearStart" | "lotsHeldAtYearStart" | "lotsBoughtInYear" | "sharesAtYearEnd">;
+      position: Omit<
+        TaxPosition,
+        "sharesAtYearStart" | "lotsHeldAtYearStart" | "lotsBoughtInYear" | "sharesAtYearEnd" | "distributionsOnYearEndHoldings"
+      >;
       lots: Lot[];
       lotsAtYearStart: Lot[] | null;
     }
@@ -88,6 +103,8 @@ export function buildTaxPositions(transactions: readonly Transaction[], year: nu
           name: tx.name ?? tx.isin ?? "Unbekannt",
           assetClass: tx.assetClass,
           distributionsInYear: ZERO,
+          priceBeforeYear: null,
+          priceBeforeYearDate: null,
           lastKnownPrice: null,
           lastKnownPriceDate: null,
           salesInYear: [],
@@ -100,12 +117,16 @@ export function buildTaxPositions(transactions: readonly Transaction[], year: nu
     if (tx.price) {
       entry.position.lastKnownPrice = d(tx.price);
       entry.position.lastKnownPriceDate = tx.date;
+      if (txYear < year) {
+        entry.position.priceBeforeYear = d(tx.price);
+        entry.position.priceBeforeYearDate = tx.date;
+      }
     }
 
     if (tx.type === "buy") {
       entry.lots.push(createLot(tx.id, tx.date, d(tx.shares), d(tx.amount).abs()));
     } else if (tx.type === "sell") {
-      const sale = fifoSell(entry.lots, d(tx.shares), d(tx.amount).abs());
+      const sale = fifoSell(entry.lots, d(tx.shares), d(tx.amount).abs().plus(d(tx.tax).abs()));
       entry.lots = sale.remaining;
       if (txYear === year) {
         entry.position.salesInYear.push({
@@ -116,7 +137,14 @@ export function buildTaxPositions(transactions: readonly Transaction[], year: nu
         });
       }
     } else if (txYear === year) {
-      entry.position.distributionsInYear = entry.position.distributionsInYear.plus(d(tx.amount).abs());
+      const gross = d(tx.amount).abs().plus(d(tx.tax).abs());
+      entry.position.distributionsInYear = entry.position.distributionsInYear.plus(gross);
+      const reportedShares = tx.shares ? d(tx.shares).abs() : ZERO;
+      const entitledShares = reportedShares.gt(ZERO) ? reportedShares : sumShares(entry.lots);
+      if (entitledShares.gt(ZERO)) {
+        const perShare = gross.div(entitledShares);
+        entry.lots = entry.lots.map((lot) => ({ ...lot, distributionsPerShareInYear: lot.distributionsPerShareInYear.plus(perShare) }));
+      }
     }
   }
   if (!reachedYear) snapshotYearStart();
@@ -127,6 +155,7 @@ export function buildTaxPositions(transactions: readonly Transaction[], year: nu
     month: monthOf(lot.date),
     shares: lot.shares,
     costPerShare: lot.costPerShare,
+    distributionsPerShareInYear: lot.distributionsPerShareInYear,
   });
 
   return [...state.values()]
@@ -137,10 +166,11 @@ export function buildTaxPositions(transactions: readonly Transaction[], year: nu
       const heldAtStartStillHeld = endLots.filter((l) => yearOf(l.date) < year).map(toTaxLot);
       return {
         ...entry.position,
-        sharesAtYearStart: startLots.reduce((acc, l) => acc.plus(l.shares), ZERO),
+        sharesAtYearStart: sumShares(startLots),
         lotsHeldAtYearStart: heldAtStartStillHeld,
         lotsBoughtInYear,
-        sharesAtYearEnd: endLots.reduce((acc, l) => acc.plus(l.shares), ZERO),
+        sharesAtYearEnd: sumShares(endLots),
+        distributionsOnYearEndHoldings: distributionsOnLots(endLots),
       };
     })
     .filter((p) => p.sharesAtYearStart.gt(ZERO) || p.lotsBoughtInYear.length > 0 || p.salesInYear.length > 0)
@@ -162,16 +192,14 @@ export function estimatePositionVorabpauschale(
     return { position, year, fundType, basiszins, parts, vorabpauschale: ZERO, taxable: ZERO, tax: ZERO };
   }
   const perShareGain = prices.yearEndPrice.minus(prices.yearStartPrice);
-  const sharesHeldAllYear = position.lotsHeldAtYearStart.reduce((acc, l) => acc.plus(l.shares), ZERO);
-  const totalSharesAtEnd = sharesHeldAllYear.plus(position.lotsBoughtInYear.reduce((acc, l) => acc.plus(l.shares), ZERO));
-  const distributionsPerShare = totalSharesAtEnd.gt(ZERO) ? position.distributionsInYear.div(totalSharesAtEnd) : ZERO;
+  const sharesHeldAllYear = sumShares(position.lotsHeldAtYearStart);
 
   if (sharesHeldAllYear.gt(ZERO)) {
     const result = vorabpauschale({
       referenceValue: sharesHeldAllYear.times(prices.yearStartPrice),
       basiszins,
       gain: sharesHeldAllYear.times(perShareGain),
-      distributions: sharesHeldAllYear.times(distributionsPerShare),
+      distributions: distributionsOnLots(position.lotsHeldAtYearStart),
       teilfreistellung,
       monthsBeforeAcquisition: 0,
       ...(options.reductionTarget ? { reductionTarget: options.reductionTarget } : {}),
@@ -185,7 +213,7 @@ export function estimatePositionVorabpauschale(
       referenceValue: lot.shares.times(prices.yearStartPrice),
       basiszins,
       gain: lot.shares.times(perShareGain),
-      distributions: lot.shares.times(distributionsPerShare),
+      distributions: lot.shares.times(lot.distributionsPerShareInYear),
       teilfreistellung,
       monthsBeforeAcquisition: months,
       ...(options.reductionTarget ? { reductionTarget: options.reductionTarget } : {}),

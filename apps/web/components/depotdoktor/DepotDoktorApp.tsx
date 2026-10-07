@@ -5,7 +5,7 @@ import { decodeCsvBytes, detectFileKind, parseBrokerCsv, FILE_KIND_MESSAGES, typ
 import { Disclaimer } from "@portfolio/legal";
 import { Button } from "@portfolio/ui";
 import { buildReport } from "@/lib/depotdoktor/report";
-import { SAMPLE_CSV_SCALABLE } from "@/lib/depotdoktor/sample";
+import { SAMPLE_CSV_TRADEREPUBLIC, SAMPLE_FILE_NAME, SAMPLE_ROW_COUNT } from "@/lib/depotdoktor/sample";
 import { buildTaxSummary, type SaleCreditInputs } from "@/lib/depotdoktor/tax/summary";
 import { EMPTY_TAX_INPUTS, taxInputsReducer } from "@/lib/depotdoktor/tax/inputs";
 import { buildReportPdfData, BROKER_LABELS } from "@/lib/depotdoktor/pdf-data";
@@ -121,6 +121,8 @@ export function DepotDoktorApp() {
       fileName: fileName ?? "export.csv",
       broker: parsed.broker,
       transactionCount: parsed.transactions.length,
+      skippedRows: parsed.skippedRows,
+      warnings: parsed.warnings,
       generatedAt: new Date(),
     });
     const blob = await renderReportPdf(data);
@@ -138,10 +140,12 @@ export function DepotDoktorApp() {
       <section className="space-y-4" data-testid="upload-section">
         <FileDrop onFile={handleFile} />
         <div className="flex flex-wrap items-center gap-3 text-sm">
-          <Button variant="secondary" onClick={() => loadText(SAMPLE_CSV_SCALABLE, "beispiel-scalable.csv")}>
+          <Button variant="secondary" onClick={() => loadText(SAMPLE_CSV_TRADEREPUBLIC, SAMPLE_FILE_NAME)}>
             Beispieldatei laden
           </Button>
-          <span className="text-muted">Synthetische Scalable-Capital-CSV mit sieben Buchungen, keine echten Daten.</span>
+          <span className="text-muted" data-testid="sample-description">
+            Synthetische Trade-Republic-CSV mit {SAMPLE_ROW_COUNT} Zeilen; keine echten Daten.
+          </span>
         </div>
         {error ? (
           <p role="alert" data-testid="parse-error" className="rounded-md border border-bordeaux bg-bordeaux-soft px-4 py-3 text-sm text-bordeaux">
@@ -184,7 +188,7 @@ export function DepotDoktorApp() {
 
       <ExportBar onExportPdf={exportPdf} onExportCsv={exportCsv} />
 
-      <div className="flex flex-wrap gap-1 border-b border-line" role="tablist" aria-label="Auswertungen">
+      <div className="flex flex-nowrap gap-1 overflow-x-auto border-b border-line" role="tablist" aria-label="Auswertungen">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -198,8 +202,8 @@ export function DepotDoktorApp() {
             onKeyDown={handleTabKey}
             className={
               tab === t.id
-                ? "-mb-px border-b-2 border-gold px-4 py-2 text-sm font-medium"
-                : "px-4 py-2 text-sm text-muted hover:text-ink"
+                ? "shrink-0 border-b-2 border-gold px-4 py-2 text-sm font-medium whitespace-nowrap"
+                : "shrink-0 border-b-2 border-transparent px-4 py-2 text-sm whitespace-nowrap text-muted hover:text-ink"
             }
           >
             {t.label}
@@ -213,6 +217,7 @@ export function DepotDoktorApp() {
         {tab === "tax" ? (
           <TaxTab
             summary={taxSummary}
+            broker={parsed.broker}
             onYearChange={setTaxYear}
             onInputChange={dispatchTaxInput}
             onCreditChange={updateSaleCredit}

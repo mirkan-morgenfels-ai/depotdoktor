@@ -48,7 +48,7 @@ describe("Vorabpauschale 2026 (Abschnitt 1.3.4)", () => {
     expect(r.vorabpauschale.toFixed(2)).toBe("0.00");
   });
 
-  test("Fall D unterjähriger Kauf im Juli: 6 volle Monate entfallen, Basisertrag 112 €", () => {
+  test("Fall D unterjähriger Kauf im Juli nach § 18 Abs. 2 InvStG: Basisertrag 224 €, Vorabpauschale 224 × 6/12 = 112 €", () => {
     const r = vorabpauschale({
       referenceValue: d(10000),
       basiszins: zins2026,
@@ -57,21 +57,57 @@ describe("Vorabpauschale 2026 (Abschnitt 1.3.4)", () => {
       monthsBeforeAcquisition: 6,
     });
     expect(r.monthsFactor.toFixed(4)).toBe("0.5000");
-    expect(r.basisertrag.toFixed(2)).toBe("112.00");
+    expect(r.basisertrag.toFixed(2)).toBe("224.00");
+    expect(r.vorabpauschale.toFixed(2)).toBe("112.00");
     expect(r.taxable.toFixed(2)).toBe("78.40");
     expect(r.tax.toFixed(2)).toBe("20.68");
   });
 
-  test("Fall D Variante nach Gesetzeswortlaut: Kürzung der Vorabpauschale statt des Basisertrags, Unterschied nur bei greifendem Deckel", () => {
-    const common = { referenceValue: d(10000), basiszins: zins2026, teilfreistellung: equity, monthsBeforeAcquisition: 6 };
-    const noCapDoc = vorabpauschale({ ...common, gain: d(1500), reductionTarget: "basisertrag" });
-    const noCapLaw = vorabpauschale({ ...common, gain: d(1500), reductionTarget: "vorabpauschale" });
-    expect(noCapLaw.vorabpauschale.toFixed(2)).toBe(noCapDoc.vorabpauschale.toFixed(2));
+  test("Fall D Standard nach Gesetzeswortlaut mit greifendem Deckel: min(224, 150) × 6/12 = 75,00 €", () => {
+    const r = vorabpauschale({
+      referenceValue: d(10000),
+      basiszins: zins2026,
+      gain: d(150),
+      teilfreistellung: equity,
+      monthsBeforeAcquisition: 6,
+    });
+    expect(r.basisertrag.toFixed(2)).toBe("224.00");
+    expect(r.capApplied).toBe(true);
+    expect(r.vorabpauschale.toFixed(2)).toBe("75.00");
+    expect(r.taxable.toFixed(2)).toBe("52.50");
+    expect(r.tax.toFixed(2)).toBe("13.85");
+  });
 
-    const capDoc = vorabpauschale({ ...common, gain: d(150), reductionTarget: "basisertrag" });
-    const capLaw = vorabpauschale({ ...common, gain: d(150), reductionTarget: "vorabpauschale" });
-    expect(capDoc.vorabpauschale.toFixed(2)).toBe("112.00");
-    expect(capLaw.vorabpauschale.toFixed(2)).toBe("75.00");
+  test("Fall D Variante 'basisertrag' (ursprüngliche Spezifikation): 224 × 6/12 = 112 €, Deckel 150 € greift nicht, 112,00 €", () => {
+    const r = vorabpauschale({
+      referenceValue: d(10000),
+      basiszins: zins2026,
+      gain: d(150),
+      teilfreistellung: equity,
+      monthsBeforeAcquisition: 6,
+      reductionTarget: "basisertrag",
+    });
+    expect(r.basisertrag.toFixed(2)).toBe("112.00");
+    expect(r.capApplied).toBe(false);
+    expect(r.vorabpauschale.toFixed(2)).toBe("112.00");
+  });
+
+  test("Fall D beide Varianten gleich, solange der Deckel nicht greift: 112,00 €", () => {
+    const common = { referenceValue: d(10000), basiszins: zins2026, teilfreistellung: equity, monthsBeforeAcquisition: 6, gain: d(1500) };
+    expect(vorabpauschale({ ...common, reductionTarget: "basisertrag" }).vorabpauschale.toFixed(2)).toBe("112.00");
+    expect(vorabpauschale({ ...common, reductionTarget: "vorabpauschale" }).vorabpauschale.toFixed(2)).toBe("112.00");
+  });
+
+  test("Fall D nach Gesetz mit Ausschüttung: (224 − 100) × 6/12 = 62,00 €", () => {
+    const r = vorabpauschale({
+      referenceValue: d(10000),
+      basiszins: zins2026,
+      gain: d(1500),
+      distributions: d(100),
+      teilfreistellung: equity,
+      monthsBeforeAcquisition: 6,
+    });
+    expect(r.vorabpauschale.toFixed(2)).toBe("62.00");
   });
 
   test.todo("Fall D: Bezugsgröße (Anschaffungspreis oder Jahresanfangswert) und Kürzungsregel gegen BMF-/Finanztip-Beispiel prüfen");

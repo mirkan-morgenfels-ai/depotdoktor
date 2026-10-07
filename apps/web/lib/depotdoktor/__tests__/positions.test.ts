@@ -46,12 +46,12 @@ describe("buildTaxPositions 2026 aus Trade-Republic-Fixture", () => {
     expect(etf.sharesAtYearEnd.toString()).toBe("100");
   });
 
-  test("Aktie: Kauf im Februar, Teilverkauf im Juni mit FIFO-Gewinn 479 − 4 × 100,10 = 78,60 €", () => {
+  test("Aktie: Kauf im Februar, Teilverkauf im Juni mit FIFO-Gewinn 479 − 4 × 100,10 = 78,60 €; Dividende brutto 18,50 + 6,50 Steuer = 25,00 €", () => {
     const stock = positions[0]!;
     expect(stock.lotsBoughtInYear.map((l) => `${l.month} ${l.shares.toString()}`)).toEqual(["2 6"]);
     expect(stock.salesInYear).toHaveLength(1);
     expect(stock.salesInYear[0]?.gain.toFixed(2)).toBe("78.60");
-    expect(stock.distributionsInYear.toFixed(2)).toBe("18.50");
+    expect(stock.distributionsInYear.toFixed(2)).toBe("25.00");
     expect(stock.lastKnownPrice?.toFixed(2)).toBe("120.00");
   });
 });
@@ -86,7 +86,7 @@ describe("buildTaxPositions über Jahresgrenze", () => {
     expect(estimate).not.toBeNull();
     expect(estimate!.parts.map((p) => `${p.label} ${p.monthsBeforeAcquisition} ${p.result.basisertrag.toFixed(2)} ${p.result.vorabpauschale.toFixed(2)}`)).toEqual([
       "Bestand am Jahresanfang 0 30.24 30.24",
-      "Kauf 2026-07-15 6 10.08 10.08",
+      "Kauf 2026-07-15 6 20.16 10.08",
     ]);
     expect(estimate!.vorabpauschale.toFixed(2)).toBe("40.32");
     expect(estimate!.taxable.toFixed(2)).toBe("28.22");
@@ -103,6 +103,25 @@ describe("buildTaxPositions über Jahresgrenze", () => {
   test("Jahr ohne bekannten Basiszins ergibt null", () => {
     const [etf] = buildTaxPositions(transactions, 2025);
     expect(estimatePositionVorabpauschale(etf!, 2020, "equity", { yearStartPrice: d(1), yearEndPrice: d(2) })).toBeNull();
+  });
+});
+
+describe("Veräußerungsgewinn mit Steuerabzug beim Verkauf (§ 20 Abs. 4 EStG)", () => {
+  const stock = { isin: "DE000TEST002", name: "Aktie", assetClass: "stock" as const };
+  const buy = tx({ date: "2026-02-10", type: "buy", amount: "-1001", shares: "10", price: "100", fee: "1", ...stock });
+
+  test("Erlös vor Steuerabzug: 459 netto + 20 Steuer = 479 €, Gewinn 479 − 4 × 100,10 = 78,60 € statt 459 − 400,40 = 58,60 €", () => {
+    const sell = tx({ date: "2026-06-20", type: "sell", amount: "459", shares: "4", price: "120", fee: "1", tax: "20", ...stock });
+    const [position] = buildTaxPositions([buy, sell], 2026);
+    expect(position?.salesInYear[0]?.proceeds.toFixed(2)).toBe("479.00");
+    expect(position?.salesInYear[0]?.cost.toFixed(2)).toBe("400.40");
+    expect(position?.salesInYear[0]?.gain.toFixed(2)).toBe("78.60");
+  });
+
+  test("Steuerabzug mit negativem Vorzeichen im Export: 459 + |−20| = 479 €, Gewinn 78,60 €", () => {
+    const sell = tx({ date: "2026-06-20", type: "sell", amount: "459", shares: "4", price: "120", fee: "1", tax: "-20", ...stock });
+    const [position] = buildTaxPositions([buy, sell], 2026);
+    expect(position?.salesInYear[0]?.gain.toFixed(2)).toBe("78.60");
   });
 });
 

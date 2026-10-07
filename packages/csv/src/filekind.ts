@@ -69,7 +69,7 @@ export const PDF_FILE_MESSAGE =
   "Das ist eine PDF-Datei, vermutlich ein Kontoauszug oder eine Abrechnung. DepotDoktor liest nur den CSV-Transaktionsexport. Trade Republic: App → Kontoauszüge → Transaktionsexport. Scalable Capital: Broker → Transaktionen → CSV.";
 
 export const ZIP_FILE_MESSAGE =
-  "Das ist eine ZIP- oder Excel-Datei. Bitte den CSV-Transaktionsexport des Brokers verwenden oder die Tabelle in Excel über „Speichern unter“ als CSV ablegen.";
+  "Das ist eine ZIP- oder Excel-Datei. Bitte laden Sie den CSV-Transaktionsexport erneut aus der App bzw. dem Webportal Ihres Brokers herunter und laden Sie ihn unverändert hoch, ohne ihn vorher in Excel zu öffnen und zu speichern.";
 
 export const BINARY_FILE_MESSAGE =
   "Die Datei ist keine Textdatei. Bitte den CSV-Transaktionsexport des Brokers verwenden.";

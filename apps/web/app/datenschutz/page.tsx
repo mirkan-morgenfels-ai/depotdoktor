@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
 import { OPERATOR, PRIVACY_SHORT } from "@portfolio/legal";
-import { LegalPage, LegalSection } from "@/components/LegalPage";
+import { ExternalLink, LegalPage, LegalSection } from "@/components/LegalPage";
+import { pageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = { title: "Datenschutzerklärung" };
+export const metadata: Metadata = pageMetadata({
+  title: "Datenschutzerklärung",
+  description:
+    "Datenschutzerklärung von DepotDoktor: Die CSV-Datei wird nur im Browser verarbeitet, keine Cookies, kein Tracking; Hosting bei Vercel.",
+  path: "/datenschutz",
+});
 
 export default function DatenschutzPage() {
   return (
@@ -21,8 +27,9 @@ export default function DatenschutzPage() {
       <LegalSection title="2. Das Wichtigste in Kürze">
         <p>
           Diese Seite ist ein privates, nicht-kommerzielles Projekt. Sie verwendet keine Cookies, keine Analyse- oder
-          Tracking-Dienste, keine Werbung und keine Kontaktformulare. Die einzige Verarbeitung personenbezogener Daten findet
-          technisch bedingt beim Hosting statt (Abschnitt 4).
+          Tracking-Dienste, keine Werbung und keine Kontaktformulare. Beim Besuch der Seite werden personenbezogene Daten
+          nur technisch bedingt beim Hosting verarbeitet (Abschnitt 4); schreiben Sie eine E-Mail, gilt zusätzlich
+          Abschnitt 5.
         </p>
       </LegalSection>
 
@@ -32,8 +39,10 @@ export default function DatenschutzPage() {
           Konkret: Wenn Sie in DepotDoktor eine CSV-Datei auswählen, wird sie vom JavaScript-Code der Seite in Ihrem Browser
           gelesen und ausgewertet. Die Datei und die daraus berechneten Kennzahlen werden weder an den Betreiber noch an Dritte
           übermittelt, nicht gespeichert und nicht protokolliert. Erzeugte Exporte (PDF, CSV) entstehen ebenfalls lokal in
-          Ihrem Browser. Sie können das jederzeit in den Entwicklerwerkzeugen Ihres Browsers (Netzwerk-Tab) nachvollziehen:
-          Nach dem Laden der Seite werden beim Einlesen, Auswerten und Exportieren keine weiteren Anfragen gesendet.
+          Ihrem Browser. Inhalte Ihrer Datei und die daraus berechneten Werte verlassen Ihren Browser nicht. Beim Wechsel
+          zwischen Seiten und beim ersten PDF-Export lädt der Browser Programmteile (JavaScript und Seitendaten) vom selben
+          Server nach; diese Anfragen enthalten keine Daten aus Ihrer Datei. Im Netzwerk-Tab der Entwicklerwerkzeuge können
+          Sie das nachprüfen.
         </p>
       </LegalSection>
 
@@ -45,7 +54,9 @@ export default function DatenschutzPage() {
           Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO; das berechtigte Interesse liegt im sicheren und stabilen Betrieb der
           Seite. Vercel verarbeitet diese Daten als Auftragsverarbeiter; die Übermittlung in die USA stützt sich auf die
           Standardvertragsklauseln der EU-Kommission und die Zertifizierung von Vercel unter dem EU-US Data Privacy Framework.
-          Einzelheiten stehen in der Datenschutzerklärung von Vercel unter https://vercel.com/legal/privacy-policy.
+          Einzelheiten stehen in der{" "}
+          <ExternalLink href="https://vercel.com/legal/privacy-notice">Datenschutzerklärung von Vercel</ExternalLink>{" "}
+          (https://vercel.com/legal/privacy-notice).
         </p>
         <p>
           Der Betreiber selbst wertet diese Logdaten nicht aus. Vercel Web Analytics und Speed Insights sind nicht aktiviert.
@@ -63,10 +74,10 @@ export default function DatenschutzPage() {
 
       <LegalSection title="6. Externe Links">
         <p>
-          Die Startseite verlinkt auf weitere Projekte, die unter eigener Adresse betrieben werden, derzeit KontoKlar. Beim
-          Anklicken eines solchen Links verlassen Sie diese Seite; für die Datenverarbeitung dort gilt die
-          Datenschutzerklärung des jeweiligen Angebots. Es werden keine Inhalte Dritter
-          (Schriften, Skripte, Videos, Karten) beim Aufruf dieser Seite nachgeladen.
+          Diese Seite verlinkt auf die Projekte KontoKlar und NetzRadar, die unter eigenen Adressen betrieben werden und
+          eigene Datenschutzerklärungen haben, sowie auf die öffentlichen Quellcode-Repositories bei GitHub (GitHub, Inc.,
+          USA). Erst beim Anklicken ruft Ihr Browser die fremde Seite auf; dort gilt die Datenschutzerklärung des jeweiligen
+          Anbieters. Vorher werden keine Daten an diese Anbieter übertragen, und die Links übermitteln keine Herkunftsseite.
         </p>
       </LegalSection>
 

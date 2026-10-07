@@ -1,5 +1,5 @@
 import { Decimal, ZERO } from "../money";
-import type { ValuationPoint } from "./ttwror";
+import { periodReturns, type ValuationPoint } from "./ttwror";
 
 export interface DrawdownResult {
   maxDrawdown: Decimal;
@@ -21,32 +21,24 @@ export function maxDrawdown(values: readonly Decimal[]): Decimal {
 }
 
 export function maxDrawdownFromPoints(points: readonly ValuationPoint[]): DrawdownResult {
-  let peak: Decimal | null = null;
-  let peakDate: string | null = null;
+  const periods = periodReturns(points);
+  let index = new Decimal(1);
+  let peak = index;
+  let peakDate: string | null = periods[0]?.from ?? null;
   let worst = ZERO;
   let worstPeakDate: string | null = null;
   let worstTroughDate: string | null = null;
-  let index: Decimal | null = null;
-  for (let i = 0; i < points.length; i += 1) {
-    const point = points[i]!;
-    const previous = i > 0 ? points[i - 1]! : null;
-    if (index === null) {
-      if (point.value.lte(ZERO)) continue;
-      index = new Decimal(1);
-    } else if (previous && previous.value.gt(ZERO)) {
-      index = index.times(point.value.minus(point.flow).div(previous.value));
-    }
-    if (peak === null || index.gt(peak)) {
+  for (const period of periods) {
+    index = index.times(new Decimal(1).plus(period.rate));
+    if (index.gt(peak)) {
       peak = index;
-      peakDate = point.date;
+      peakDate = period.to;
     }
-    if (peak.gt(ZERO)) {
-      const drawdown = peak.minus(index).div(peak);
-      if (drawdown.gt(worst)) {
-        worst = drawdown;
-        worstPeakDate = peakDate;
-        worstTroughDate = point.date;
-      }
+    const drawdown = peak.minus(index).div(peak);
+    if (drawdown.gt(worst)) {
+      worst = drawdown;
+      worstPeakDate = peakDate;
+      worstTroughDate = period.to;
     }
   }
   return { maxDrawdown: worst, peakDate: worstPeakDate, troughDate: worstTroughDate };

@@ -30,7 +30,7 @@ export function vorabpauschale(input: VorabpauschaleInput): VorabpauschaleResult
     throw new RangeError(`monthsBeforeAcquisition muss zwischen 0 und 11 liegen, erhalten: ${months}`);
   }
   const monthsFactor = new Decimal(12 - months).div(12);
-  const target = input.reductionTarget ?? "basisertrag";
+  const target = input.reductionTarget ?? "vorabpauschale";
   const distributions = input.distributions ?? ZERO;
   const taxRate = input.taxRate ?? ABGELTUNGSTEUER_RATE;
 

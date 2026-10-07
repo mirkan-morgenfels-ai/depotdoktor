@@ -19,12 +19,15 @@ export interface TtwrorResult {
 
 export function periodReturns(points: readonly ValuationPoint[]): PeriodReturn[] {
   const periods: PeriodReturn[] = [];
-  for (let i = 1; i < points.length; i += 1) {
-    const previous = points[i - 1]!;
+  for (let i = 0; i < points.length; i += 1) {
+    const previous = i > 0 ? points[i - 1]! : null;
     const current = points[i]!;
-    if (previous.value.lte(ZERO)) continue;
-    const rate = current.value.minus(current.flow).div(previous.value).minus(ONE);
-    periods.push({ from: previous.date, to: current.date, rate });
+    if (previous && previous.value.gt(ZERO)) {
+      const rate = current.value.minus(current.flow).div(previous.value).minus(ONE);
+      periods.push({ from: previous.date, to: current.date, rate });
+    } else if (current.flow.gt(ZERO) && current.value.gt(ZERO)) {
+      periods.push({ from: current.date, to: current.date, rate: current.value.div(current.flow).minus(ONE) });
+    }
   }
   return periods;
 }

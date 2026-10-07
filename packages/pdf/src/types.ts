@@ -24,6 +24,7 @@ export interface ReportPdfData {
   generatedAt: string;
   sourceLine: string;
   metrics: ReportMetric[];
+  metricsNote: string;
   valueTable: ReportTable;
   positionsTable: ReportTable;
   allocationTables: ReportTable[];
@@ -32,4 +33,5 @@ export interface ReportPdfData {
   taxMethod: string[];
   notes: string[];
   disclaimer: string;
+  footerLine: string;
 }

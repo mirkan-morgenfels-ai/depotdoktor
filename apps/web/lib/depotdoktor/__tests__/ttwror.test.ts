@@ -14,7 +14,7 @@ describe("TTWROR", () => {
       point("2026-12-31", "17600", "0"),
     ];
     const result = ttwror(points);
-    expect(result.periods.map((p) => p.rate.toFixed(4))).toEqual(["0.1000", "0.1000"]);
+    expect(result.periods.map((p) => p.rate.toFixed(4))).toEqual(["0.0000", "0.1000", "0.1000"]);
     expect(result.total?.toFixed(4)).toBe("0.2100");
   });
 
@@ -38,9 +38,21 @@ describe("TTWROR", () => {
     expect(ttwror(points).total?.toFixed(4)).toBe("-0.2000");
   });
 
-  test("ein einzelner Kauf ergibt 0 % und keine Perioden", () => {
+  test("ein einzelner Kauf ohne Gebühr ergibt eine Periode mit 0 %", () => {
     const points = [point("2026-01-01", "1000", "1000")];
     const result = ttwror(points);
+    expect(result.periods.map((p) => `${p.from} ${p.to} ${p.rate.toFixed(4)}`)).toEqual(["2026-01-01 2026-01-01 0.0000"]);
+    expect(result.total?.toFixed(4)).toBe("0.0000");
+  });
+
+  test("Kaufgebühr des ersten Kaufs: Zufluss 1001 zu Periodenbeginn, Wert 1000, 1000/1001 − 1 = −0,0999 %", () => {
+    const result = ttwror([point("2026-01-01", "1000", "1001")]);
+    expect(result.total?.toFixed(6)).toBe(d(1000).div(1001).minus(1).toFixed(6));
+    expect(result.total?.toFixed(6)).toBe("-0.000999");
+  });
+
+  test("Kauf ohne bekannten Kurs (Wert 0) ergibt keine Periode statt −100 %", () => {
+    const result = ttwror([point("2026-01-01", "0", "800")]);
     expect(result.periods).toHaveLength(0);
     expect(result.total?.toFixed(4)).toBe("0.0000");
   });
@@ -49,7 +61,7 @@ describe("TTWROR", () => {
     expect(ttwror([]).total).toBeNull();
   });
 
-  test("Periode mit Startwert 0 wird übersprungen", () => {
+  test("Periode mit Startwert 0 und Zufluss beginnt mit dem Zufluss: Neukauf ohne Gebühr ergibt 0 %", () => {
     const points = [
       point("2026-01-01", "1000", "1000"),
       point("2026-02-01", "0", "-1100"),
@@ -57,10 +69,19 @@ describe("TTWROR", () => {
       point("2026-04-01", "550", "0"),
     ];
     const result = periodReturns(points);
-    expect(result).toHaveLength(2);
-    expect(result[0]?.rate.toFixed(4)).toBe("0.1000");
-    expect(result[1]?.rate.toFixed(4)).toBe("0.1000");
+    expect(result.map((p) => `${p.from} ${p.to} ${p.rate.toFixed(4)}`)).toEqual([
+      "2026-01-01 2026-01-01 0.0000",
+      "2026-01-01 2026-02-01 0.1000",
+      "2026-03-01 2026-03-01 0.0000",
+      "2026-03-01 2026-04-01 0.1000",
+    ]);
     expect(ttwror(points).total?.toFixed(4)).toBe("0.2100");
+  });
+
+  test("Periode mit Startwert 0 ohne Zufluss (Ausschüttung nach Vollverkauf) wird übersprungen", () => {
+    const points = [point("2026-01-01", "1000", "1000"), point("2026-02-01", "0", "-1100"), point("2026-03-01", "0", "-5")];
+    expect(periodReturns(points)).toHaveLength(2);
+    expect(ttwror(points).total?.toFixed(4)).toBe("0.1000");
   });
 });
 
