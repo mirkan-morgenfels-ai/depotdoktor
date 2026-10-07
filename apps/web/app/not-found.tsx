@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-
-const LINK_CLASS = "text-green underline underline-offset-4 hover:text-gold-deep";
+import { BUTTON_GOLD, BUTTON_OUTLINE_LIGHT } from "@/components/site/buttons";
+import { StatusPage } from "@/components/site/StatusPage";
 
 export const metadata: Metadata = {
   title: "Seite nicht gefunden",
@@ -10,18 +10,21 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <section className="mx-auto flex max-w-2xl flex-col justify-center gap-4 py-16">
-      <p className="text-xs uppercase tracking-[0.2em] text-gold-deep">Fehler 404</p>
-      <h1 className="font-serif text-3xl break-words hyphens-auto">Seite nicht gefunden</h1>
-      <p className="text-muted">Die aufgerufene Adresse existiert nicht oder wurde verschoben.</p>
-      <p className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-        <Link href="/" className={LINK_CLASS}>
-          Zur Startseite
-        </Link>
-        <Link href="/projects/depotdoktor" className={LINK_CLASS}>
-          Zu DepotDoktor
-        </Link>
-      </p>
-    </section>
+    <StatusPage
+      code="404"
+      eyebrow="Fehler 404"
+      title="Seite nicht gefunden"
+      text="Die aufgerufene Adresse existiert nicht oder wurde verschoben."
+      actions={
+        <>
+          <Link href="/" className={BUTTON_GOLD}>
+            Zur Startseite
+          </Link>
+          <Link href="/projects/depotdoktor" className={BUTTON_OUTLINE_LIGHT}>
+            Zu DepotDoktor
+          </Link>
+        </>
+      }
+    />
   );
 }

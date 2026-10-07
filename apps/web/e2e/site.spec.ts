@@ -11,6 +11,8 @@ const REPO_BASE = "https://github.com/mirkan-morgenfels-ai";
 const DEPOTDOKTOR_REPO = `${REPO_BASE}/depotdoktor`;
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://depotdoktor.vercel.app").replace(/\/+$/, "");
 const HOME_TITLE = "Projekte · Mirkan Deniz Günkaya";
+const HOME_DESCRIPTION =
+  "Drei Portfolio-Projekte zu Finanzdaten, maschinellem Lernen und Graph-ML: DepotDoktor, KontoKlar und NetzRadar, jeweils mit öffentlichem Quellcode auf GitHub.";
 const PROJECT_TITLE = "DepotDoktor – Depot-Steuer- und Performance-Analyzer";
 const PUBLIC_PATHS = ["/", "/projects/depotdoktor", ...LEGAL_PAGES.map((legal) => legal.path)];
 const TABS = ["Performance", "Allokation", "Steuer", "Transaktionen"];
@@ -21,12 +23,15 @@ async function metaContent(page: Page, selector: string): Promise<string | null>
 
 test("start page lists the three projects", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: "Projekte" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Drei Projekte zu Finanzdaten, maschinellem Lernen und Graph-ML" }),
+  ).toBeVisible();
+  await expect(page.getByRole("main").getByRole("heading", { level: 2, name: "Projekte", exact: true })).toBeVisible();
   await expect(page.getByTestId(/^project-/)).toHaveCount(3);
   await expect(page.getByRole("main")).not.toContainText("in Arbeit");
   await expect(page.getByRole("main")).not.toContainText("noch nicht veröffentlicht");
 
-  await expect(page.getByTestId("project-depotdoktor").getByRole("link", { name: /^Zum Projekt/ })).toHaveAttribute(
+  await expect(page.getByTestId("project-depotdoktor").getByRole("link", { name: /^Live ansehen/ })).toHaveAttribute(
     "href",
     "/projects/depotdoktor",
   );
@@ -35,7 +40,7 @@ test("start page lists the three projects", async ({ page }) => {
     ["kontoklar", "https://kontoklar-eight.vercel.app/projects/kontoklar"],
     ["netzradar", "https://netzradar.vercel.app/projects/netzradar"],
   ] as const) {
-    const link = page.getByTestId(`project-${slug}`).getByRole("link", { name: /^Zum Projekt/ });
+    const link = page.getByTestId(`project-${slug}`).getByRole("link", { name: /^Live ansehen/ });
     await expect(link).toHaveAttribute("href", href);
     await expect(link).toHaveAttribute("rel", "noopener noreferrer");
     await expect(link).not.toHaveAttribute("target", /.+/);
@@ -55,12 +60,14 @@ test("main navigation and skip link are present", async ({ page }) => {
   await page.goto("/projects/depotdoktor");
   const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
   const links = nav.getByRole("list").getByRole("link");
-  await expect(links).toHaveCount(4);
+  await expect(links).toHaveCount(5);
   await expect(links.nth(0)).toHaveText("Start");
   await expect(links.nth(1)).toHaveText("DepotDoktor");
   await expect(links.nth(2)).toHaveAccessibleName("KontoKlar (externe Seite)");
   await expect(links.nth(3)).toHaveAccessibleName("NetzRadar (externe Seite)");
-  for (const index of [2, 3]) {
+  await expect(links.nth(4)).toHaveAccessibleName("GitHub (externe Seite)");
+  await expect(links.nth(4)).toHaveAttribute("href", REPO_BASE);
+  for (const index of [2, 3, 4]) {
     await expect(links.nth(index)).toHaveAttribute("href", /^https:\/\//);
     await expect(links.nth(index)).toHaveAttribute("rel", "noopener noreferrer");
     await expect(links.nth(index)).not.toHaveAttribute("target", /.+/);
@@ -160,6 +167,10 @@ test("pages carry canonical links, link previews and distinct titles", async ({ 
   for (const path of PUBLIC_PATHS) {
     await page.goto(path);
     titles[path] = await page.title();
+    if (path === "/") {
+      expect(await metaContent(page, 'meta[name="description"]')).toBe(HOME_DESCRIPTION);
+      expect(await metaContent(page, 'meta[property="og:description"]')).toBe(HOME_DESCRIPTION);
+    }
     const canonical = await page.locator('link[rel="canonical"]').getAttribute("href");
     expect(canonical, path).not.toBeNull();
     expect(new URL(canonical ?? "").origin, path).toBe(SITE_URL);

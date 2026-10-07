@@ -21,9 +21,9 @@ export default function ImpressumPage() {
           {OPERATOR.city}
         </p>
         <p>
-          Kontakt: <a href={`mailto:${OPERATOR.email}`} className="text-green underline">{OPERATOR.email}</a>
+          Kontakt: <a href={`mailto:${OPERATOR.email}`} className="link">{OPERATOR.email}</a>
         </p>
-        <p className="text-muted">
+        <p className="text-slate">
           Diese Seite ist ein privates, nicht-kommerzielles Portfolio- und Lernprojekt. Es werden keine Waren oder
           Dienstleistungen angeboten, es gibt keine Werbung und keine Bezahlfunktion. Kontaktaufnahme bitte per E-Mail.
         </p>
@@ -35,7 +35,7 @@ export default function ImpressumPage() {
           Gewähr übernommen. Alle Berechnungen und Ergebnisse der bereitgestellten Werkzeuge sind unverbindliche Schätzungen
           zu Informationszwecken. Sie stellen keine Anlage-, Steuer- oder Rechtsberatung dar und sind kein Angebot und keine
           Aufforderung zum Kauf oder Verkauf von Finanzinstrumenten. Näheres regeln die{" "}
-          <Link href="/nutzungsbedingungen" className="text-green underline">
+          <Link href="/nutzungsbedingungen" className="link">
             Nutzungsbedingungen
           </Link>
           .

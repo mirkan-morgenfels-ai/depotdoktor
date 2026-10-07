@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_SITE_URL,
+  GITHUB_PROFILE_URL,
+  HOME_DESCRIPTION,
   LEGAL_LINKS,
   LICENSE_URL,
   NAV_LINKS,
@@ -17,6 +19,8 @@ describe("PROJECTS", () => {
     expect(PROJECTS.map((project) => project.slug)).toEqual(["depotdoktor", "kontoklar", "netzradar"]);
     expect(PROJECTS.map((project) => project.code)).toEqual(["K1", "K2", "K3"]);
     expect(PROJECTS.map((project) => project.kicker)).toEqual(["Projekt K1", "Projekt K2", "Projekt K3"]);
+    expect(PROJECTS.map((project) => project.number)).toEqual(["01", "02", "03"]);
+    expect(PROJECTS.map((project) => project.topic)).toEqual(["Finanzdaten", "Maschinelles Lernen", "Graph-ML"]);
   });
 
   it("links DepotDoktor internally and the other projects over https", () => {
@@ -45,12 +49,20 @@ describe("PROJECTS", () => {
       "Anomalie-Erkennung in Transaktionsnetzwerken: klassische Baseline gegen Graph Neural Networks, mit zeitlichem Split und PR-AUC.",
     );
   });
+
+  it("uses the same start page description as the sibling sites", () => {
+    expect(HOME_DESCRIPTION).toBe(
+      "Drei Portfolio-Projekte zu Finanzdaten, maschinellem Lernen und Graph-ML: DepotDoktor, KontoKlar und NetzRadar, jeweils mit öffentlichem Quellcode auf GitHub.",
+    );
+  });
 });
 
 describe("navigation", () => {
-  it("offers start and the three projects in the main navigation", () => {
-    expect(NAV_LINKS.map((link) => link.label)).toEqual(["Start", "DepotDoktor", "KontoKlar", "NetzRadar"]);
-    expect(NAV_LINKS.map((link) => link.external)).toEqual([false, false, true, true]);
+  it("offers start, the three projects and the GitHub profile in the main navigation", () => {
+    expect(NAV_LINKS.map((link) => link.label)).toEqual(["Start", "DepotDoktor", "KontoKlar", "NetzRadar", "GitHub"]);
+    expect(NAV_LINKS.map((link) => link.external)).toEqual([false, false, true, true, true]);
+    expect(NAV_LINKS.at(-1)?.href).toBe(GITHUB_PROFILE_URL);
+    expect(GITHUB_PROFILE_URL).toBe("https://github.com/mirkan-morgenfels-ai");
   });
 
   it("offers the three legal pages", () => {

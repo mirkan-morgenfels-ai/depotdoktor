@@ -1,6 +1,8 @@
 import type { Transaction, TransactionType } from "@portfolio/csv";
+import { cx } from "@portfolio/ui";
 import { d, formatEur, formatNumber } from "@/lib/depotdoktor/money";
 import { formatDateDe } from "@/lib/depotdoktor/dates";
+import { Panel } from "./Panel";
 import { ScrollRegion } from "./ScrollRegion";
 
 const TYPE_LABELS: Record<TransactionType, string> = {
@@ -15,42 +17,64 @@ const TYPE_LABELS: Record<TransactionType, string> = {
   other: "Sonstiges",
 };
 
+const TYPE_TONE: Partial<Record<TransactionType, string>> = {
+  buy: "border-navy-950/15 text-ink",
+  sell: "border-gold/60 bg-gold-soft/60 text-gold-deep",
+  dividend: "border-moss/30 bg-moss-soft/60 text-moss",
+  interest: "border-moss/30 bg-moss-soft/60 text-moss",
+  fee: "border-wine/25 bg-wine-soft/60 text-wine",
+  tax: "border-wine/25 bg-wine-soft/60 text-wine",
+};
+
 export function TransactionsTab({ transactions }: { transactions: Transaction[] }) {
   return (
-    <section className="rounded-lg border border-line bg-surface p-6" data-testid="transactions-tab">
-      <h2 className="mb-4 font-serif text-xl">Normalisierte Transaktionen</h2>
+    <Panel
+      title="Normalisierte Transaktionen"
+      eyebrow="Buchungen"
+      testId="transactions-tab"
+      aside={<p className="text-xs text-slate">{transactions.length} Zeilen</p>}
+    >
       <ScrollRegion label="Tabelle Transaktionen">
-        <table className="w-full text-sm">
-          <thead className="text-left text-xs uppercase tracking-wide text-muted">
+        <table className="data-table">
+          <thead>
             <tr>
-              <th className="py-2 pr-4">Datum</th>
-              <th className="py-2 pr-4">Art</th>
-              <th className="py-2 pr-4 text-right">Betrag</th>
-              <th className="py-2 pr-4">Name</th>
-              <th className="py-2 pr-4">ISIN</th>
-              <th className="py-2 pr-4 text-right">Stück</th>
-              <th className="py-2 pr-4 text-right">Kurs</th>
-              <th className="py-2 pr-4 text-right">Gebühr</th>
-              <th className="py-2 text-right">Steuer</th>
+              <th className="pr-4">Datum</th>
+              <th className="pr-4">Art</th>
+              <th className="pr-8 text-right">Betrag</th>
+              <th className="pr-4">Name</th>
+              <th className="pr-4">ISIN</th>
+              <th className="pr-4 text-right">Stück</th>
+              <th className="pr-4 text-right">Kurs</th>
+              <th className="pr-4 text-right">Gebühr</th>
+              <th className="text-right">Steuer</th>
             </tr>
           </thead>
           <tbody>
             {transactions.map((t) => (
-              <tr key={t.id} className={t.type === "other" ? "border-t border-line text-muted" : "border-t border-line"}>
-                <td className="py-2 pr-4 whitespace-nowrap">{formatDateDe(t.date)}</td>
-                <td className="py-2 pr-4">{TYPE_LABELS[t.type]}</td>
-                <td className="py-2 pr-4 text-right tabular-nums whitespace-nowrap">{formatEur(d(t.amount))}</td>
-                <td className="py-2 pr-4">{t.name ?? "–"}</td>
-                <td className="py-2 pr-4 font-mono text-xs">{t.isin ?? "–"}</td>
-                <td className="py-2 pr-4 text-right tabular-nums">{t.shares ? formatNumber(d(t.shares)) : "–"}</td>
-                <td className="py-2 pr-4 text-right tabular-nums">{t.price ? formatEur(d(t.price)) : "–"}</td>
-                <td className="py-2 pr-4 text-right tabular-nums">{t.fee === "0" ? "–" : formatEur(d(t.fee))}</td>
-                <td className="py-2 text-right tabular-nums">{t.tax === "0" ? "–" : formatEur(d(t.tax))}</td>
+              <tr key={t.id} className={t.type === "other" ? "text-slate" : undefined}>
+                <td className="num pr-4 whitespace-nowrap">{formatDateDe(t.date)}</td>
+                <td className="pr-4">
+                  <span
+                    className={cx(
+                      "inline-block rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap",
+                      TYPE_TONE[t.type] ?? "border-line text-slate",
+                    )}
+                  >
+                    {TYPE_LABELS[t.type]}
+                  </span>
+                </td>
+                <td className="pr-8 text-right whitespace-nowrap">{formatEur(d(t.amount))}</td>
+                <td className="pr-4">{t.name ?? "–"}</td>
+                <td className="pr-4 font-mono text-xs text-slate">{t.isin ?? "–"}</td>
+                <td className="pr-4 text-right">{t.shares ? formatNumber(d(t.shares)) : "–"}</td>
+                <td className="pr-4 text-right whitespace-nowrap">{t.price ? formatEur(d(t.price)) : "–"}</td>
+                <td className="pr-4 text-right whitespace-nowrap">{t.fee === "0" ? "–" : formatEur(d(t.fee))}</td>
+                <td className="text-right whitespace-nowrap">{t.tax === "0" ? "–" : formatEur(d(t.tax))}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </ScrollRegion>
-    </section>
+    </Panel>
   );
 }

@@ -1,43 +1,57 @@
-"use client";
-
-import { Bar, BarChart, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { AXIS_TICK, CHART_COLORS } from "./theme";
+import { CHART_COLORS, seriesColor } from "./theme";
 
 export interface AllocationBar {
   label: string;
   share: number;
-  value: number;
+  shareLabel: string;
+  valueLabel: string;
 }
 
 export interface AllocationBarsProps {
   slices: AllocationBar[];
-  formatShare: (share: number) => string;
-  formatValue: (value: number) => string;
   testId?: string;
 }
 
-export function AllocationBars({ slices, formatShare, formatValue, testId }: AllocationBarsProps) {
-  if (slices.length === 0) return null;
-  const height = 24 + slices.length * 36;
+const PERCENT_PATTERN = /^(.*\d)(\s?%)$/;
+
+function ShareValue({ label }: { label: string }) {
+  const match = PERCENT_PATTERN.exec(label);
+  if (!match || match[1] === undefined || match[2] === undefined) return <>{label}</>;
   return (
-    <div style={{ width: "100%", height }} data-testid={testId}>
-      <ResponsiveContainer>
-        <BarChart data={slices} layout="vertical" margin={{ top: 4, right: 64, bottom: 4, left: 8 }} barCategoryGap={8}>
-          <XAxis type="number" domain={[0, 1]} hide />
-          <YAxis type="category" dataKey="label" width={170} tick={AXIS_TICK} tickLine={false} axisLine={false} />
-          <Tooltip
-            cursor={{ fill: CHART_COLORS.line, opacity: 0.4 }}
-            contentStyle={{ borderColor: CHART_COLORS.line, borderRadius: 6, fontSize: 12 }}
-            formatter={(value, _name, item) => [
-              `${formatShare(Number(value))} · ${formatValue(Number((item.payload as AllocationBar).value))}`,
-              "Anteil",
-            ]}
-          />
-          <Bar dataKey="share" fill={CHART_COLORS.green} radius={[0, 4, 4, 0]} isAnimationActive={false}>
-            <LabelList dataKey="share" position="right" formatter={(v: unknown) => formatShare(Number(v))} style={{ fill: CHART_COLORS.ink, fontSize: 12 }} />
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
+    <>
+      <span>{match[1]}</span>
+      <span className="ml-[0.06em] align-[0.18em] font-sans text-[0.42em] font-medium tracking-normal">{match[2]}</span>
+    </>
+  );
+}
+
+export function AllocationBars({ slices, testId }: AllocationBarsProps) {
+  if (slices.length === 0) return null;
+  return (
+    <ul className="space-y-6" data-testid={testId}>
+      {slices.map((slice, index) => {
+        const color = seriesColor(index);
+        const width = Math.max(0, Math.min(1, slice.share)) * 100;
+        return (
+          <li key={slice.label} data-testid="allocation-bar">
+            <div className="flex items-end justify-between gap-4">
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="inline-flex items-center gap-2.5 text-sm font-medium text-ink">
+                  <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+                  {slice.label}
+                </span>
+                <span className="pl-5 text-[13px] text-slate [font-variant-numeric:tabular-nums]">{slice.valueLabel}</span>
+              </div>
+              <span className="font-display text-[1.75rem] leading-[0.9] font-medium tracking-[-0.01em] whitespace-nowrap text-ink [font-variant-numeric:lining-nums_tabular-nums] sm:text-[2rem]">
+                <ShareValue label={slice.shareLabel} />
+              </span>
+            </div>
+            <div aria-hidden="true" className="mt-3 h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: CHART_COLORS.grid }}>
+              <div className="h-full rounded-full" style={{ width: `${width}%`, backgroundColor: color }} />
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

@@ -7,6 +7,7 @@ const scalableFixture = path.resolve(__dirname, "../../../packages/csv/fixtures/
 const tradeRepublicFixture = path.resolve(__dirname, "../../../packages/csv/fixtures/traderepublic-synthetic.csv");
 const unknownFixture = path.resolve(__dirname, "../../../packages/csv/fixtures/unknown-format.csv");
 const tradeRepublicText = readFileSync(tradeRepublicFixture, "utf8");
+const TAB_NAMES = ["Performance", "Allokation", "Steuer", "Transaktionen"];
 
 async function loadSample(page: Page) {
   await page.getByRole("button", { name: "Beispieldatei laden" }).click();
@@ -81,7 +82,8 @@ test("Beispieldatei: Report mit allen Kennzahlen, kein Upload", async ({ page, b
   await expect(page.getByTestId("allocation-asset-class")).not.toContainText("Nicht zugeordnet");
   await expect(page.getByTestId("allocation-unassigned-hint")).toHaveCount(0);
   await expect(page.getByTestId("allocation-region")).toContainText("Irland (Fondsdomizil)");
-  await expect(page.getByTestId("allocation-asset-class").locator("svg").first()).toBeVisible();
+  await expect(page.getByTestId("allocation-asset-class").getByTestId("allocation-bar")).toHaveCount(2);
+  await expect(page.getByTestId("allocation-asset-class").getByTestId("allocation-bar").first()).toBeVisible();
 
   await page.getByRole("tab", { name: "Steuer" }).click();
   await expect(page.getByTestId("tax-position")).toHaveCount(2);
@@ -137,20 +139,31 @@ test("Kacheln und Schaltflächen tragen die Stile aus den Workspace-Paketen", as
   await page.goto("/projects/depotdoktor");
   await loadSample(page);
 
-  for (const tile of [page.getByTestId("kpi-ttwror"), page.getByTestId("stat-tile").first()]) {
+  for (const [tile, expected] of [
+    [page.getByTestId("kpi-ttwror"), { padding: "24px", fontSize: "38px" }],
+    [page.getByTestId("stat-tile").first(), { padding: "20px", fontSize: "30px" }],
+  ] as const) {
     const style = await tile.evaluate((element) => {
       const value = element.children[1] as HTMLElement;
-      return { padding: getComputedStyle(element).paddingTop, fontSize: getComputedStyle(value).fontSize };
+      return {
+        padding: getComputedStyle(element).paddingTop,
+        fontSize: getComputedStyle(value).fontSize,
+        fontFamily: getComputedStyle(value).fontFamily,
+      };
     });
-    expect(style).toEqual({ padding: "16px", fontSize: "24px" });
+    expect({ padding: style.padding, fontSize: style.fontSize }).toEqual(expected);
+    expect(style.fontFamily).toMatch(/Cormorant/);
   }
 
   await page.getByTestId("export-csv").focus();
   await page.keyboard.press("Shift+Tab");
   const pdfButton = page.getByTestId("export-pdf");
   await expect(pdfButton).toBeFocused();
-  const ring = await pdfButton.evaluate((element) => getComputedStyle(element).boxShadow);
-  expect(ring).toContain("rgb(125, 95, 23)");
+  const ring = await pdfButton.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { color: style.outlineColor, style: style.outlineStyle, width: style.outlineWidth };
+  });
+  expect(ring).toEqual({ color: "rgb(125, 95, 23)", style: "solid", width: "2px" });
 
   const disabled = await page.getByRole("button", { name: "Andere Datei" }).evaluate((element) => {
     const button = element as HTMLButtonElement;
@@ -198,9 +211,14 @@ test("Scalable-Datei per Upload: übersprungene Zeile, gleicher Zeitraum, Hinwei
 });
 
 test("Unbekanntes Format bricht mit Meldung ab", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/projects/depotdoktor");
   await page.getByTestId("file-input").setInputFiles(unknownFixture);
-  await expect(page.getByTestId("parse-error")).toContainText("nicht erkannt");
+  const error = page.getByTestId("parse-error");
+  await expect(error).toContainText("Datei nicht auswertbar");
+  await expect(error).toContainText("unknown-format.csv: ");
+  await expect(error).toContainText("nicht erkannt");
+  await expect(error).toBeInViewport();
   await expect(page.getByTestId("report-section")).toHaveCount(0);
 });
 
@@ -275,7 +293,7 @@ test("Angesetzte Vorabpauschalen mindern den Veräußerungsgewinn, Andere Datei 
   await expect(page.getByTestId("tax-price-provisional")).toHaveCount(0);
   await expect(page.getByTestId("tax-vorabpauschale")).toHaveText(/^Vorabpauschale 2026\s*0,00\s€\s*Summe aller Positionen$/);
   await expect(credit).toHaveAccessibleName("Für diese Anteile in Vorjahren angesetzte Vorabpauschalen (€, optional)");
-  await expect(credit).toHaveAccessibleDescription(/^Summe der Beträge, die Ihre Bank .* InvStG\.$/);
+  await expect(credit).toHaveAccessibleDescription(/^Summe der Beträge, die Ihre Bank .*\sInvStG\.$/);
 
   await credit.fill("25,30");
   await expect(sale.getByTestId("tax-sale-gain")).toHaveText("174,70 €");
@@ -497,6 +515,31 @@ test("Mobil 390 px: Reiterleiste einzeilig, Steuerergebnis ohne seitliches Scrol
   await page.getByRole("tab", { name: "Transaktionen" }).click();
   await expect(page.getByRole("tabpanel").locator('[role="region"][data-overflowing="true"]')).toHaveCount(1);
   await expect(page.getByTestId("scroll-shadow")).toHaveCount(1);
+});
+
+test("Mobil 320 px: alle vier Reiter stehen im Raster vollständig im Bild", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.goto("/projects/depotdoktor");
+  await loadSample(page);
+  const tabs = page.getByRole("tab");
+  await expect(tabs).toHaveCount(4);
+  const boxes = await tabs.evaluateAll((elements) =>
+    elements.map((element) => {
+      const rect = element.getBoundingClientRect();
+      return { left: rect.left, right: rect.right, top: Math.round(rect.top), clientWidth: document.documentElement.clientWidth };
+    }),
+  );
+  for (const box of boxes) {
+    expect(box.left).toBeGreaterThanOrEqual(0);
+    expect(box.right).toBeLessThanOrEqual(box.clientWidth);
+  }
+  expect(new Set(boxes.map((box) => box.top)).size).toBe(2);
+  for (const tab of TAB_NAMES) {
+    await page.getByRole("tab", { name: tab }).click();
+    await expect(page.getByRole("tab", { name: tab })).toHaveAttribute("aria-selected", "true");
+    const scrollWidth = await page.evaluate(() => (document.scrollingElement ?? document.documentElement).scrollWidth);
+    expect(scrollWidth, tab).toBeLessThanOrEqual(320);
+  }
 });
 
 test("Rechtsseiten sind erreichbar und verlinkt", async ({ page }) => {
