@@ -25,7 +25,7 @@ Stand 07.10.2026: Parser, Kennzahlen, Steuermodul, Report mit PDF- und CSV-Expor
 
 - `apps/web/app/projects/depotdoktor/` Seite
 - `apps/web/components/depotdoktor/` Upload, Report-Ansicht, Reiter (Performance, Allokation, Steuer, Transaktionen), `ScrollRegion` für waagrecht scrollbare Tabellen
-- `apps/web/lib/depotdoktor/` Transaktionsmodell, Kennzahlen (`metrics/`), Steuerlogik (`tax/`), Kachel-Texte für Ansicht und PDF (`kpis.ts`), PDF-Daten (`pdf-data.ts`), Unit-Tests in `__tests__/`
+- `apps/web/lib/depotdoktor/` Transaktionsmodell, Kennzahlen (`metrics/`), Steuerlogik (`tax/`), Kachel-Texte für Ansicht und PDF (`kpis.ts`), PDF-Daten (`pdf-data.ts`), CSV-Export im deutschen Excel-Format (`export-csv.ts`), Beschriftungen für Buchungsart und Broker (`labels.ts`), Unit-Tests in `__tests__/`
 - `apps/web/lib/site.ts` Projekte, Navigation, Rechtslinks und Live-Adressen (einzige Stelle mit Live-URLs), `apps/web/lib/metadata.ts` Seitenmetadaten
 - `apps/web/e2e/` Playwright-Tests (`depotdoktor.spec.ts`, `site.spec.ts`, `helpers.ts`)
 - `packages/csv/` Parser, Broker-Erkennung, Normalisierung, Fixtures
@@ -96,7 +96,7 @@ Stand 07.10.2026: Parser, Kennzahlen, Steuermodul, Report mit PDF- und CSV-Expor
 
 ## Test-Stand
 
-Stand 07.10.2026: siehe README („Tests“) und `docs/verifikation.md` (Abschnitte „Nachkontrolle 07.10.2026“ und „Nachbesserung 07.10.2026“). Dazu ein bewusst offener `todo` für Fall D. `pnpm audit --prod`: keine Meldung; `pnpm audit` meldet nur braces über `eslint-config-next` (nur Linting, ohne Patch).
+Stand 08.10.2026: siehe README („Tests“) und `docs/verifikation.md` (Abschnitte „Nachkontrolle 07.10.2026“, „Nachbesserung 07.10.2026“ und „CSV-Export für deutsches Excel 08.10.2026“). Dazu ein bewusst offener `todo` für Fall D. `pnpm audit --prod`: keine Meldung; `pnpm audit` meldet nur braces über `eslint-config-next` (nur Linting, ohne Patch).
 
 ## Definition of Done
 
@@ -108,7 +108,8 @@ Stand 07.10.2026: siehe README („Tests“) und `docs/verifikation.md` (Abschni
 ## Offene Entscheidungen
 
 - ~~Kicker „Projekt K1/K2/K3“ auf Start- und Projektseite.~~ Entschieden am 08.10.2026: „Projekt 01/02/03“ wie auf den Projektkarten.
-- Impressum ohne ladungsfähige Anschrift (`docs/verifikation.md`, Rechtstexte Punkt 1).
+- ~~Impressum ohne ladungsfähige Anschrift (`docs/verifikation.md`, Rechtstexte Punkt 1).~~ Entschieden am 07.10.2026 vom Autor, gemeinsam für K1, K2 und K3: Das Impressum nennt nur Name, Ort und E-Mail. `docs/verifikation.md` führt dazu seit 08.10.2026 nur noch diesen Statussatz statt einer Abwägung; die Rechtstexte sind unverändert.
 - Standard-Fondstyp bei Positionen ohne Assetklasse (derzeit Aktienfonds) und Vorbelegung des Steuerjahres.
 - Normangabe im Disclaimer behalten oder nur auf das BaFin-Merkblatt verweisen.
-- Ob `CLAUDE.md` öffentlich bleibt (derzeit: bereinigt öffentlich).
+- ~~Ob `CLAUDE.md` öffentlich bleibt (derzeit: bereinigt öffentlich).~~ Entschieden am 08.10.2026, gemeinsam für K1, K2 und K3: bleibt bereinigt öffentlich, als transparenter Nachweis KI-gestützter Arbeit. Rechnerspezifisches steht weiter nur in der nicht versionierten `CLAUDE.local.md`.
+- ~~CSV-Export „Transaktionen als CSV“: maschinenlesbar oder deutsches Excel-Format (bisher eine Mischung).~~ Entschieden am 08.10.2026: deutsches Excel-Format, weil die Zielgruppe deutsche Privatanleger sind, die die Datei per Doppelklick öffnen; im alten Format las ein deutsches Excel Beträge mit Dezimalpunkt als Text oder Datum. Semikolon, Dezimalkomma ohne Tausenderpunkt, deutsche Spaltenköpfe, Datum TT.MM.JJJJ, UTF-8 mit BOM, CRLF, Quoting, ASCII-Minus, volle Genauigkeit ohne Rundung; Apostroph vor Textfeldern, die mit `=`, `+`, `-`, `@`, Tab oder CR beginnen, nie vor Zahlenfeldern. Maschinenlesbare Rohdaten liefert der Original-Export des Brokers. Einzelheiten und Excel-Probe in `docs/verifikation.md`, Abschnitt „CSV-Export für deutsches Excel 08.10.2026“.

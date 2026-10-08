@@ -10,11 +10,7 @@ import { formatEur, formatNumber, formatPercent } from "./money";
 import { formatDateDe } from "./dates";
 import { timestampForFilename } from "./download";
 import { amountKpis, PERFORMANCE_EXPLANATION, performanceKpis, periodText } from "./kpis";
-
-export const BROKER_LABELS: Record<BrokerId, string> = {
-  traderepublic: "Trade Republic",
-  scalable: "Scalable Capital",
-};
+import { BROKER_LABELS } from "./labels";
 
 export const TAX_TABLE_COLUMNS = ["Anteil", "Stück", "Monate", "Basisertrag", "Vorabpausch.", "Steuerpfl.", "Steuer"];
 export const TAX_TABLE_WIDTHS = [0.2, 0.08, 0.08, 0.16, 0.18, 0.15, 0.15];

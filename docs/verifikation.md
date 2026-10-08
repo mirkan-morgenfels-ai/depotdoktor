@@ -1,6 +1,6 @@
 # Verifikation und offene Punkte (K1 DepotDoktor)
 
-Stand: 07.10.2026 (Nachkontrolle und Nachbesserung, siehe die letzten beiden Abschnitte). Quellen zur Steuerlogik gehören hierher, nicht in den Code.
+Stand: 08.10.2026 (CSV-Export für deutsches Excel, siehe den letzten Abschnitt; zur Steuerlogik die Abschnitte „Nachkontrolle 07.10.2026“ und „Nachbesserung 07.10.2026“). Quellen zur Steuerlogik gehören hierher, nicht in den Code.
 
 ## Prüfstand der Steuerlogik
 
@@ -36,12 +36,12 @@ Rechtsgrundlagen: § 18 InvStG (Vorabpauschale), § 2 Abs. 11 InvStG (Ausschütt
 
 ## Rechtstexte (Schritt 6), zu verifizieren
 
-Die Texte unter `/impressum`, `/datenschutz` und `/nutzungsbedingungen` wurden ohne juristische Prüfung erstellt. Offene Punkte, die der Autor prüfen oder entscheiden muss:
+Die Texte unter `/impressum`, `/datenschutz` und `/nutzungsbedingungen` wurden ohne juristische Prüfung erstellt. Stand und offene Prüfpunkte:
 
-1. **Impressum ohne Anschrift.** Der Autor möchte keine Adresse auf der Seite; genannt sind Name, Ort und E-Mail. § 5 DDG verlangt für „geschäftsmäßige“ Telemedien eine ladungsfähige Anschrift; für rein private, nicht-kommerzielle Seiten gilt die Pflicht nach herrschender Lesart nicht. Eine Portfolio-Seite zur Bewerbung liegt dazwischen. Optionen: (a) so lassen und das Risiko einer Abmahnung tragen, (b) Adresse ergänzen, (c) Impressum-Service mit c/o-Adresse nutzen. Prüfen gegen: BMJ-Leitfaden zur Impressumspflicht, Verbraucherzentrale, e-recht24. Offen.
+1. **Impressum.** Impressum nennt Name, Ort und E-Mail; Entscheidung des Autors (07.10.2026).
 2. **Vercel als Auftragsverarbeiter.** Anschrift von Vercel Inc. und die Angabe zur Zertifizierung unter dem EU-US Data Privacy Framework gegen https://vercel.com/legal/privacy-notice und https://www.dataprivacyframework.gov prüfen. Ein Auftragsverarbeitungsvertrag (DPA) mit Vercel ist Teil der Vercel-Nutzungsbedingungen; im Dashboard nachsehen, ob er akzeptiert wurde. Offen.
 3. **Nutzungsbedingungen.** Ein vollständiger Haftungsausschluss ist nach § 309 Nr. 7 BGB unwirksam; der Text beschränkt die Haftung deshalb auf Vorsatz, grobe Fahrlässigkeit und Personenschäden und verweist für die unentgeltliche Überlassung auf §§ 521, 599 BGB. Ob diese Formulierung trägt, ist juristisch zu prüfen. Offen.
-4. **Kontaktadresse.** Im Impressum steht die private Gmail-Adresse. Falls eine eigene Domain kommt, auf eine Adresse dieser Domain umstellen (`packages/legal/src/operator.ts`). Offen.
+4. **Kontaktadresse.** Die E-Mail-Adresse für Impressum und Datenschutzerklärung steht zentral in `packages/legal/src/operator.ts`; bei einer eigenen Domain dort umstellen.
 5. **Normangabe im Disclaimer.** Seit 07.10.2026 „im Sinne von § 2 Abs. 8 Satz 1 Nr. 10 WpHG“ statt der bisherigen Angabe „Paragraf 85 WpHG“; dieser Paragraf regelt Anlage- und Anlagestrategieempfehlungen, die Legaldefinition der Anlageberatung steht in § 2 Abs. 8 Satz 1 Nr. 10 WpHG. Titel und Datum des BaFin-Merkblatts „Hinweise zum Tatbestand der Anlageberatung“ (Stand Februar 2025, veröffentlicht am 10.02.2025) am 07.10.2026 auf bafin.de geprüft: stimmen. Das Merkblatt selbst stützt die Definition auf § 1 Abs. 1a Satz 2 Nr. 1a KWG und § 2 Abs. 2 Nr. 4 WpIG; die WpHG-Norm ist die gleichlautende Definition für Wertpapierdienstleistungen. Ob die Normangabe ganz entfallen soll, entscheidet der Autor (offen).
 
 ## Abweichungen von der ursprünglichen Spezifikation
@@ -85,7 +85,7 @@ Behoben:
 4. **Kontrast.** Gold `#b8962e` erreicht auf Papier nur 2,7:1. Für Text gibt es `--color-gold-deep` (heute `#7d5f17`); Gold bleibt für Linien und Flächen. Betroffen: „Projekt K1“, Hinweis „Deckel“, Hover-Farbe der Links.
 5. **Zugänglichkeit.** Reiter nach WAI-ARIA-Muster (`aria-controls`, `tabpanel`, Pfeiltasten, Home/End, Roving Tabindex); horizontal scrollbare Tabellen mit `tabindex="0"` und Beschriftung erreichbar; Sprunglink „Zum Inhalt springen“; sichtbarer Fokusring in Gold-Deep; Datei-Input mit `aria-label`; Navigation als Liste mit `aria-label`. axe-core meldete keine Verstöße mehr.
 6. **Datei-Eingabe.** Dateien über 25 MB werden mit Meldung abgelehnt, Lesefehler werden abgefangen statt unbehandelt zu bleiben.
-7. **CSV-Export.** Textzellen, die mit `=`, `+`, `@`, Tab oder einem Minus ohne Ziffer beginnen, erhalten ein führendes Apostroph (Schutz vor Formelauswertung in Tabellenkalkulationen). Unit-Test ergänzt.
+7. **CSV-Export.** Textzellen, die mit `=`, `+`, `@`, Tab oder einem Minus ohne Ziffer beginnen, erhalten ein führendes Apostroph (Schutz vor Formelauswertung in Tabellenkalkulationen). Unit-Test ergänzt. Seit 08.10.2026 gilt der Schutz für jedes Textfeld, das mit `-` beginnt, auch vor Ziffern (Abschnitt „CSV-Export für deutsches Excel 08.10.2026“).
 8. **Favicon** (`apps/web/app/icon.svg`), vorher 404 in der Konsole.
 9. **PDF.** Erstellungsdatum nutzt die lokale Zeit statt UTC.
 10. **README.** „Papa Parse (Web Worker)“ gestrichen (kein Worker im Einsatz), Volatilitätsbeschreibung präzisiert, „Kirchensteuer optional“ und Sparerpauschbetrag als nicht berücksichtigt ausgewiesen, Roadmap-Stand aktualisiert.
@@ -528,3 +528,69 @@ Lokal unter Windows 11 mit Node 22.23.2, pnpm 10.34.5 und Chromium Headless Shel
 | `pnpm test:e2e` mit `CI=true` | 29 Tests grün (`depotdoktor.spec.ts` 15, `site.spec.ts` 14), darin axe-core bei 390, 768 und 1280 px ohne Verstöße und die Reiter bei 320 px vollständig im Bild |
 
 Die README-Screenshots (`docs/screenshots/performance.png`, `steuer.png`) sind neu erzeugt: Playwright gegen `next start`, Viewport 1280 px, Skalierung 1,5, Beispieldatei, im Steuerreiter Beispielkurse für den ETF (Kurs 01.01.2026: 80,00 €, Kurs 31.12.2026: 95,00 €).
+
+## CSV-Export für deutsches Excel 08.10.2026
+
+Entscheidung vom 08.10.2026 (vom Autor mit „Erledige alles“ an Claude delegiert): „Transaktionen als CSV“ ist eine Datei für Menschen, nicht für Programme. Zielgruppe sind deutsche Privatanleger, die die Datei per Doppelklick in einem Excel mit deutschen Ländereinstellungen öffnen. Maschinenlesbare Rohdaten liefert weiterhin der Original-Export des Brokers.
+
+Begründung: Das bisherige Mischformat (Semikolon und BOM, aber englische Spaltenköpfe, ISO-Datum und Dezimalpunkt) taugte für keinen der beiden Zwecke ganz. Nachprüfbare Probe am 08.10.2026 in Excel 16 (Windows 11, de-DE, Listentrennzeichen „;“; geöffnet über COM mit `Workbooks.Open(…, Local:=True)` wie beim Doppelklick, schreibgeschützt): Die Dateien erzeugte die alte Exportfunktion (`transactionsToCsv` in `apps/web/lib/depotdoktor/export-csv.ts`, Stand von `main` bei Commit 076935b) aus der Beispieldatei und aus `packages/csv/fixtures/scalable-synthetic.csv`.
+
+- Beispieldatei (Trade Republic, 8 Zeilen): In der Betragsspalte wurden `18.5` und `3.21` zu Datumswerten („18. Mai“ = 46160, „Mrz 21“ = 44256), `-42.17` blieb Text; ebenso wurde die Steuer `6.5` zum Datum („06. Mai“) und die Stückzahl `0.000491` blieb Text. Die Summe der Betragsspalte (K2:K9) ergab 91.893 = 10.000 − 8.001 − 1.001 + 46.160 + 44.256 + 479 + 0 statt 1.456,54.
+- Scalable-Fixture (6 ausgeführte Zeilen): `-8000.99`, `-1000.99`, `479.01` und die Gebühr `0.99` blieben Text, `18.5` und `3.21` wurden Datumswerte. Summe der Betragsspalte (K2:K7) 100.416 = 10.000 + 46.160 + 44.256 statt 1.498,74.
+- Gegenprobe mit denselben Daten im neuen Format: alle Beträge als Zahl, Summe 1.456,54 bzw. 1.498,74 = 10.000 − 8.000,99 − 1.000,99 + 18,50 + 479,01 + 3,21.
+
+In beiden alten Dateien addierte Excel also Datums-Seriennummern zu Geldbeträgen und ließ andere Beträge stillschweigend weg.
+
+### Format
+
+| Merkmal | bis 07.10.2026 | seit 08.10.2026 |
+|---|---|---|
+| Trennzeichen, Kodierung | Semikolon, UTF-8 mit BOM | unverändert |
+| Zeilenende | CRLF | CRLF, auch nach der letzten Zeile |
+| Spaltenköpfe | `date;datetime;broker;type;…;source_row` | Datum, Zeitstempel laut Export, Broker, Art, ISIN, Name, Kürzel, Assetklasse, Stück, Kurs, Betrag, Gebühr, Steuer, Währung, Buchungsart laut Export, Zeile im Export |
+| Datum | `2026-01-06` | `06.01.2026` |
+| Broker, Art, Assetklasse | Schlüssel (`scalable`, `buy`, `unknown`) | Beschriftungen der Oberfläche (Scalable Capital, Kauf, Nicht zugeordnet) |
+| Zahlen | `-8000.99` | `-8000,99`: Dezimalkomma, kein Tausenderpunkt, volle Genauigkeit der Daten, keine zusätzliche Rundung |
+| Minus | ASCII-Bindestrich | ASCII-Bindestrich (U+002D), nie U+2212 |
+| Quoting | bei `;`, `"`, CR und LF, `"` verdoppelt | unverändert |
+| Formel-Injektion | Apostroph vor Text mit `=`, `+`, `@`, Tab, CR oder einem Minus ohne folgende Ziffer oder Punkt | Apostroph vor jedem Textfeld, das mit `=`, `+`, `-`, `@`, Tab oder CR beginnt; Zahlenfelder nie |
+
+Einzelheiten:
+
+- Der Zeitstempel bleibt der Rohwert des Brokers (Trade Republic in UTC mit `Z`, Scalable ohne Zeitzone); eine Umrechnung in Ortszeit wäre eine neue Annahme. Excel behandelt ihn als Text.
+- Zahlenfelder (Stück, Kurs, Betrag, Gebühr, Steuer, Zeile im Export) erhalten kein Apostroph, weil Excel sonst nicht damit rechnet. Ihre Werte stammen aus `parseDecimal` und haben immer die Form `-?\d+(\.\d+)?`; ein Wert, der nicht so aussieht, wird wie ein Textfeld ausgegeben und entschärft.
+- Excel zeigt das Apostroph bei CSV-Dateien in der Zelle an (`'=1+1`). Das ist der übliche Preis dieses Schutzes und betrifft nur Texte, die mit einem der sechs Zeichen beginnen.
+- Excel rechnet mit 15 signifikanten Stellen. Die Datei enthält die volle Genauigkeit der Daten; bei längeren Werten kürzt erst Excel.
+- Die Beschriftungen für Buchungsart und Broker liegen jetzt in `apps/web/lib/depotdoktor/labels.ts` und gelten gemeinsam für Transaktionsreiter, Dateikopf, PDF und CSV; die Assetklassen kommen aus `ASSET_CLASS_LABELS` in `metrics/allocation.ts`.
+- Hinweis unter den Schaltflächen, jetzt als eigene Zeile mit begrenzter Zeilenlänge: „Beide Exporte entstehen im Browser; Ihre Daten werden nicht übertragen. Die CSV ist für Excel mit deutschen Ländereinstellungen eingerichtet (Semikolon, Dezimalkomma).“
+- DepotDoktor liest die eigene Exportdatei nicht wieder ein; sie ist kein Broker-Export und wird mit „Das CSV-Format wurde nicht erkannt …“ abgelehnt (am 08.10.2026 mit `parseBrokerCsv` geprüft).
+
+### Tests und Proben
+
+- Unit (`export.test.ts`, Abschnitt „CSV-Export für deutsches Excel“, 13 Tests statt bisher 4): BOM genau einmal (Bytes EF BB BF), Kopfzeile, CRLF ohne einzelnes CR oder LF, Kaufzeile und Einzahlung als ganze Zeile, Dezimalkomma ohne Rundung (`-1234567.891234567` wird `-1234567,891234567`, `0.000491` wird `0,000491`), ASCII-Minus, Quoting (Semikolon, Anführungszeichen, CRLF im Feld; zurückgelesen ergibt sich der Ausgangstext), Injektionsschutz für alle sechs Anfangszeichen, Zahlenfelder ohne Apostroph, Rücklesen der Beispieldatei mit Papa Parse (Kopf plus 8 Zeilen zu je 16 Spalten; Datum, Stück, Kurs, Betrag, Gebühr, Steuer und Quellzeile zurückgewandelt gleich dem Datenmodell) und Erkennung des Semikolons durch Papa Parse ohne Vorgabe, trotz Dezimalkomma.
+- E2E (`depotdoktor.spec.ts`, „Beispieldatei: Report mit allen Kennzahlen, kein Upload“): Hinweistext, Dateiname, Bytes EF BB BF, deutsche Kopfzeile, CRLF, kein U+2212, Papa Parse mit Semikolon ergibt 9 Zeilen zu je 16 Spalten, die ETF-Kaufzeile vollständig (`06.01.2026` … `-8001;1;0;EUR;SAVINGS_PLAN/BUY;3`).
+- Papa Parse ist dafür als Entwicklungsabhängigkeit von `apps/web` eingetragen, in derselben Version 5.7.0 wie in `packages/csv`.
+- Einmalige Probe in Excel 16 (lokal, Windows 11, de-DE; Öffnen über COM mit `Workbooks.Open(…, Local:=True)` wie beim Doppelklick, ohne Speichern geschlossen), nicht automatisiert, weil die CI kein Excel hat. Datei: die Beispieldatei plus eine Zeile mit `Fonds "A"; Klasse B` und Zeilenumbruch im Namen, `=1+1` als Kürzel, `-Buy` als Buchungsart und Betrag `-1234.5678`. Ergebnis: 10 Zeilen, 16 Spalten; Umlaute in den Spaltenköpfen richtig; Datum als Datumswert (`06.01.2026` = 46028); Stück, Kurs, Betrag, Gebühr, Steuer und Zeile als Zahl (`-8001`, `18,5`, `0,000491`, `-42,17`, `-1234,5678`); der Name mit Semikolon, Anführungszeichen und Zeilenumbruch in einer Zelle; `'=1+1` und `'-Buy` als Text, keine Formel. Summe der Beträge der acht Beispielzeilen 1.456,54 = 10.000 − 8.001 − 1.001 + 18,50 + 3,21 + 479 + 0 − 42,17.
+
+### Weitere Entscheidungen vom 08.10.2026
+
+- Abschnitt „Rechtstexte“, Punkt 1: Die frühere Abwägung zur Impressumspflicht ist durch einen Statussatz ersetzt (Impressum nennt Name, Ort und E-Mail; Entscheidung des Autors vom 07.10.2026). Punkt 4 ist sachlich gefasst (Ort der Kontaktadresse im Code statt persönlicher Notiz). Die Rechtstexte selbst sind unverändert.
+- `CLAUDE.md` bleibt bereinigt öffentlich, als transparenter Nachweis KI-gestützter Arbeit; Rechnerspezifisches steht weiter nur in der nicht versionierten `CLAUDE.local.md`.
+
+### Prüfergebnisse
+
+Lokal unter Windows 11 mit Node 22.23.2, pnpm 10.34.5 und Chromium Headless Shell 1234, E2E mit `CI=true` gegen `next start` auf Port 3601.
+
+| Schritt | Ergebnis |
+|---|---|
+| `pnpm install --frozen-lockfile` | grün (Lockfile um `papaparse` und `@types/papaparse` für `apps/web` ergänzt) |
+| `pnpm typecheck` (einschließlich E2E-Dateien) | grün |
+| `pnpm lint` (alle sechs Pakete) | grün |
+| `pnpm test` | 247 Tests grün (csv 50, pdf 2, web 195) und 1 offener `todo`; vorher 238 (web 186) |
+| `pnpm build` | grün |
+| `pnpm test:e2e` mit `CI=true` | 29 Tests grün im ersten Durchlauf, ohne Wiederholung (`depotdoktor.spec.ts` 15, `site.spec.ts` 14), darin axe-core bei 390, 768 und 1280 px ohne Verstöße |
+| `pnpm audit --prod` / `pnpm audit` | keine Meldung / nur braces über eslint-config-next (unverändert) |
+
+Mutationsprobe am 08.10.2026 (je eine Änderung in `export-csv.ts`, danach wiederhergestellt): Minus ohne Schutz, Dezimalpunkt statt Komma, LF statt CRLF, ohne BOM, Zeilenumbruch ohne Anführungszeichen, Apostroph auch vor Zahlen und Minus als U+2212 lassen jeweils Tests in `export.test.ts` fehlschlagen.
+
+Nachkontrolle nach der Prüfung am 08.10.2026: Excel-Probe zum alten Format mit den Dateien im Repo nachgestellt und nachprüfbar eingetragen (Abschnittsanfang), Umlaute im E2E-Test als echte Zeichen statt Escape-Sequenzen, Punkt 4 der Rechtstexte sachlich gefasst, Ablehnungsmeldung im README wörtlich zitiert. Danach alle Schritte der Tabelle erneut ausgeführt, Ergebnis unverändert: `install --frozen-lockfile`, `typecheck`, `lint` und `build` grün, 247 Unit-Tests grün und 1 offener `todo`, 29 E2E-Tests grün im ersten Durchlauf, `pnpm audit` wie oben.

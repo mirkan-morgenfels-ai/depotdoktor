@@ -9,8 +9,9 @@ import { buildReport } from "@/lib/depotdoktor/report";
 import { SAMPLE_CSV_TRADEREPUBLIC, SAMPLE_FILE_NAME, SAMPLE_ROW_COUNT } from "@/lib/depotdoktor/sample";
 import { buildTaxSummary, type SaleCreditInputs } from "@/lib/depotdoktor/tax/summary";
 import { EMPTY_TAX_INPUTS, taxInputsReducer } from "@/lib/depotdoktor/tax/inputs";
-import { buildReportPdfData, BROKER_LABELS } from "@/lib/depotdoktor/pdf-data";
-import { transactionsToCsv } from "@/lib/depotdoktor/export-csv";
+import { buildReportPdfData } from "@/lib/depotdoktor/pdf-data";
+import { BROKER_LABELS } from "@/lib/depotdoktor/labels";
+import { CSV_MIME_TYPE, transactionsToCsv } from "@/lib/depotdoktor/export-csv";
 import { downloadBlob, timestampForFilename } from "@/lib/depotdoktor/download";
 import { FileDrop } from "./FileDrop";
 import { PerformanceTab } from "./PerformanceTab";
@@ -123,7 +124,7 @@ export function DepotDoktorApp() {
 
   function exportCsv() {
     if (!parsed) return;
-    const blob = new Blob([transactionsToCsv(parsed.transactions)], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob([transactionsToCsv(parsed.transactions)], { type: CSV_MIME_TYPE });
     downloadBlob(blob, `depotdoktor-transaktionen-${timestampForFilename()}.csv`);
   }
 
