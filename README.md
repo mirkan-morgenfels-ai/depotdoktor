@@ -19,7 +19,7 @@ Ziel: TTWROR und IRR getrennt ausweisen und die Vorabpauschale nachvollziehbar s
 - Berechnet TTWROR, IRR, Volatilität (annualisiert) und Max Drawdown aus den Depotbuchungen.
 - Zeigt die Allokation nach Assetklasse und Region; Region ist der Ländercode der ISIN, also das Fondsdomizil, nicht die Anlageregion.
 - Schätzt die Vorabpauschale je Position nach § 18 InvStG mit Teilfreistellung und FIFO bei Verkäufen. Bei Kauf im Jahr wird die Vorabpauschale um 1/12 je vollen Monat vor dem Kaufmonat gekürzt (§ 18 Abs. 2 InvStG).
-- Exportiert den Report als PDF und die normalisierten Transaktionen als CSV.
+- Exportiert den Report als PDF und die normalisierten Transaktionen als CSV für ein deutsches Excel (Abschnitt „CSV-Export“).
 - Verarbeitet alles im Browser. Es gibt keinen Upload, keinen Account und keine Speicherung. Eine Content-Security-Policy (`default-src 'self'`, `connect-src 'self' data:`, `form-action 'self'`) verhindert technisch, dass Skripte der Seite Daten per fetch oder XHR, als Bild-, Skript- oder Formularanfrage an fremde Server senden. Fremde Seiten werden nur aufgerufen, wenn Sie einen externen Link anklicken.
 
 ## Screenshots
@@ -67,6 +67,18 @@ Rechenbeispiele: 10.000 € in einem thesaurierenden Aktien-ETF am 1. Januar 202
 
 Der Fondstyp (und damit die Teilfreistellungsquote) wird je Position vom Nutzer gewählt und gilt für alle Steuerjahre. Standard: Aktienfonds, bei Aktien, Anleihen und Krypto „kein Fonds“. Eine freie, weiterverbreitbare Datenquelle für die Teilfreistellungsquote je ISIN gibt es nicht; der Scalable-Export unterscheidet nicht zwischen Aktie und Fonds, die Oberfläche bittet dort um Prüfung. Die Kurse am 01.01. und 31.12. werden je Steuerjahr und Position eingetragen. Vorbelegt ist für den 01.01. der letzte Kurs aus dem Export bis zum 31.12. des Vorjahres, für den 31.12. der letzte Kurs bis zum Ende des Steuerjahres; diese Werte sind als „vorläufig“ gekennzeichnet. Fehlt ein Kurs oder stammen beide unverändert aus derselben Buchung, zeigt DepotDoktor kein Steuerergebnis, sondern „Kurse eintragen“. Beim Wechsel des Steuerjahres erscheinen die Kurse des gewählten Jahres, und der PDF-Report verwendet sie.
 
+## CSV-Export
+
+„Transaktionen als CSV“ richtet sich an Privatanleger, die die Datei per Doppelklick in einem Excel mit deutschen Ländereinstellungen öffnen. Wer die Rohdaten maschinell weiterverarbeiten will, nutzt den Original-Export des Brokers.
+
+- Semikolon als Trennzeichen, Zeilenende CRLF, UTF-8 mit BOM (Excel liest Umlaute dann richtig).
+- Spalten: Datum, Zeitstempel laut Export, Broker, Art, ISIN, Name, Kürzel, Assetklasse, Stück, Kurs, Betrag, Gebühr, Steuer, Währung, Buchungsart laut Export, Zeile im Export.
+- Datum als TT.MM.JJJJ. Zahlen mit Dezimalkomma ohne Tausenderpunkt und in der vollen Genauigkeit der eingelesenen Daten, ohne zusätzliche Rundung. Das Minus ist ein ASCII-Bindestrich, kein typografisches Minuszeichen, damit Excel mit den Werten rechnet.
+- Felder mit Semikolon, Anführungszeichen oder Zeilenumbruch stehen in Anführungszeichen; Anführungszeichen im Feld werden verdoppelt.
+- Schutz vor Formel-Injektion: Textfelder, die mit `=`, `+`, `-`, `@`, Tab oder Wagenrücklauf beginnen, erhalten ein vorangestelltes Apostroph; Excel zeigt es in der Zelle an. Zahlenfelder bleiben unverändert.
+
+Geprüft mit Unit- und E2E-Tests (Papa Parse zerlegt die Datei in 16 Spalten) und einmalig lokal in Excel 16 mit deutschen Ländereinstellungen: Datum und Beträge kommen als Zahlen an, die Summe der Beträge stimmt. Einzelheiten in [docs/verifikation.md](docs/verifikation.md). DepotDoktor selbst liest die exportierte Datei nicht wieder ein; sie ist kein Broker-Export und wird mit der Meldung „Das CSV-Format wurde nicht erkannt …“ abgelehnt.
+
 ## Datenschutz
 
 Die CSV-Datei wird ausschließlich im Browser gelesen und verarbeitet. Inhalte Ihrer Datei werden nicht an einen Server übertragen, es gibt keine Anmeldung und keine Speicherung, weder auf dem Server noch im Browser (keine Cookies, kein localStorage). Beim Wechsel zwischen Seiten und beim ersten PDF-Export lädt der Browser Programmteile (JavaScript und Seitendaten) vom selben Server nach; diese Anfragen enthalten keine Daten aus der Datei. Ein automatisierter Test lädt die Beispieldatei, wechselt die Reiter, exportiert CSV und PDF und lässt dabei nur GET-Anfragen an denselben Server auf `/_next/static/` oder mit `_rsc`-Parameter zu. Es läuft keine Seitenstatistik.
@@ -97,9 +109,9 @@ pnpm test:e2e
 
 `pnpm test` führt die Unit-Tests in `packages/csv`, `packages/pdf` und `apps/web` aus. `pnpm test:e2e` startet den Dev-Server (mit `CI=true` nach `pnpm build` den Produktionsserver, wie in der CI) und lädt die Testdateien im Browser. Der Port ist 3000, über `PORT` wählbar (z. B. `PORT=3101`); ohne installierte Playwright-Browser kann ein vorhandenes Chromium über `PLAYWRIGHT_CHROMIUM_PATH=/pfad/zu/chromium` angegeben werden.
 
-Stand 07.10.2026: 238 Unit-Tests (csv 50, pdf 2, web 186) und 29 Playwright-Tests, alle grün; dazu ein bewusst offener Test (`todo`) für Fall D, siehe [docs/verifikation.md](docs/verifikation.md).
+Stand 08.10.2026: 247 Unit-Tests (csv 50, pdf 2, web 195) und 29 Playwright-Tests, alle grün; dazu ein bewusst offener Test (`todo`) für Fall D, siehe [docs/verifikation.md](docs/verifikation.md).
 
-Unit-Tests decken TTWROR (auch mit Kaufgebühr des ersten Kaufs und Kauf nach Vollverkauf), IRR (einschließlich Divergenz-Fallback), Volatilität, Max Drawdown (auch nach Vollverkauf), die Bewertungspunkte an Depotbuchungen, Vorabpauschale (Normalfall, Wertzuwachs unter Basisertrag, Verlustjahr, unterjähriger Kauf mit Zwölftelung der Vorabpauschale, Bruttoausschüttungen je Anteil zum Zahltag, kein Bestand am 31.12.), die Kursvorbelegung je Steuerjahr mit „vorläufig“ und „Kurse eintragen“, FIFO mit angesetzten Vorabpauschalen und mit Steuerabzug beim Verkauf, Kurseingaben je Steuerjahr mit Fondstyp je Position, die Dateityp-Erkennung (PDF, ZIP, Binärdaten, Windows-1252, UTF-16 mit BOM), den CSV-Export und den PDF-Report (zwölf Kennzahlen, übersprungene Zeilen, Hinweise, Fußzeile, Disclaimer auf jeder Seite) ab, jeweils mit von Hand gerechneten Erwartungswerten. Die E2E-Tests laden die Testdateien beider Broker hoch, auch als UTF-16-Datei, prüfen Kennzahlen und Diagramme in allen Reitern, die Eingabe angesetzter Vorabpauschalen beim Verkauf, den Wechsel des Steuerjahres mit Kursen je Jahr, den PDF- und CSV-Download, die Fehlermeldung bei unbekanntem Format, die Ablehnung von PDF- und Excel-Dateien, Startseite, Navigation, Rechtsseiten, 404-Seite, Metadaten, `robots.txt` und Sitemap, die mobile Darstellung, axe-core bei 390, 768 und 1280 px und dass während der Auswertung keine Anfrage mit Dateiinhalten die Seite verlässt.
+Unit-Tests decken TTWROR (auch mit Kaufgebühr des ersten Kaufs und Kauf nach Vollverkauf), IRR (einschließlich Divergenz-Fallback), Volatilität, Max Drawdown (auch nach Vollverkauf), die Bewertungspunkte an Depotbuchungen, Vorabpauschale (Normalfall, Wertzuwachs unter Basisertrag, Verlustjahr, unterjähriger Kauf mit Zwölftelung der Vorabpauschale, Bruttoausschüttungen je Anteil zum Zahltag, kein Bestand am 31.12.), die Kursvorbelegung je Steuerjahr mit „vorläufig“ und „Kurse eintragen“, FIFO mit angesetzten Vorabpauschalen und mit Steuerabzug beim Verkauf, Kurseingaben je Steuerjahr mit Fondstyp je Position, die Dateityp-Erkennung (PDF, ZIP, Binärdaten, Windows-1252, UTF-16 mit BOM), den CSV-Export (BOM, CRLF, Quoting, Dezimalkomma, Vorzeichen, Injektionsschutz, Rücklesen mit Papa Parse) und den PDF-Report (zwölf Kennzahlen, übersprungene Zeilen, Hinweise, Fußzeile, Disclaimer auf jeder Seite) ab, jeweils mit von Hand gerechneten Erwartungswerten. Die E2E-Tests laden die Testdateien beider Broker hoch, auch als UTF-16-Datei, prüfen Kennzahlen und Diagramme in allen Reitern, die Eingabe angesetzter Vorabpauschalen beim Verkauf, den Wechsel des Steuerjahres mit Kursen je Jahr, den PDF- und CSV-Download (CSV mit BOM, CRLF und 16 Spalten je Zeile), die Fehlermeldung bei unbekanntem Format, die Ablehnung von PDF- und Excel-Dateien, Startseite, Navigation, Rechtsseiten, 404-Seite, Metadaten, `robots.txt` und Sitemap, die mobile Darstellung, axe-core bei 390, 768 und 1280 px und dass während der Auswertung keine Anfrage mit Dateiinhalten die Seite verlässt.
 
 Die Steuerlogik ist gegen fünf von Hand durchgerechnete Referenzfälle (A–E, Tabelle in [docs/verifikation.md](docs/verifikation.md)) getestet. Die Prüfung gegen den Vorabpauschale-Rechner der Stiftung Warentest und ein Finanztip-Beispiel steht noch aus; offene Punkte und Abweichungen sind dort dokumentiert.
 
@@ -120,6 +132,7 @@ packages/legal/                       Disclaimer, Datenschutztexte
 packages/charts/                      Diagramm-Komponenten (Recharts)
 packages/pdf/                         Report-Vorlage für den PDF-Export (@react-pdf/renderer)
 docs/verifikation.md                  Prüfstand der Steuerlogik, offene Punkte, Abweichungen
+CLAUDE.md                             Arbeitsanweisungen für die KI-gestützte Entwicklung mit Claude Code
 ```
 
 ## Grenzen

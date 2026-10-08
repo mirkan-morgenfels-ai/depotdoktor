@@ -2,20 +2,9 @@ import type { Transaction, TransactionType } from "@portfolio/csv";
 import { cx } from "@portfolio/ui";
 import { d, formatEur, formatNumber } from "@/lib/depotdoktor/money";
 import { formatDateDe } from "@/lib/depotdoktor/dates";
+import { TRANSACTION_TYPE_LABELS } from "@/lib/depotdoktor/labels";
 import { Panel } from "./Panel";
 import { ScrollRegion } from "./ScrollRegion";
-
-const TYPE_LABELS: Record<TransactionType, string> = {
-  buy: "Kauf",
-  sell: "Verkauf",
-  dividend: "Dividende",
-  interest: "Zinsen",
-  fee: "Gebühr",
-  tax: "Steuer",
-  deposit: "Einzahlung",
-  withdrawal: "Auszahlung",
-  other: "Sonstiges",
-};
 
 const TYPE_TONE: Partial<Record<TransactionType, string>> = {
   buy: "border-navy-950/15 text-ink",
@@ -60,7 +49,7 @@ export function TransactionsTab({ transactions }: { transactions: Transaction[] 
                       TYPE_TONE[t.type] ?? "border-line text-slate",
                     )}
                   >
-                    {TYPE_LABELS[t.type]}
+                    {TRANSACTION_TYPE_LABELS[t.type]}
                   </span>
                 </td>
                 <td className="pr-8 text-right whitespace-nowrap">{formatEur(d(t.amount))}</td>

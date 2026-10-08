@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import Papa from "papaparse";
 import { originOf, watchErrors } from "./helpers";
 
 const scalableFixture = path.resolve(__dirname, "../../../packages/csv/fixtures/scalable-synthetic.csv");
@@ -119,13 +120,42 @@ test("Beispieldatei: Report mit allen Kennzahlen, kein Upload", async ({ page, b
   expect(pdfBytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
   expect(pdfBytes.byteLength).toBeGreaterThan(5000);
 
+  await expect(page.getByTestId("export-hint")).toHaveText(
+    "Beide Exporte entstehen im Browser; Ihre Daten werden nicht übertragen. Die CSV ist für Excel mit deutschen Ländereinstellungen eingerichtet (Semikolon, Dezimalkomma).",
+  );
   const csvDownload = page.waitForEvent("download");
   await page.getByTestId("export-csv").click();
   const csv = await csvDownload;
   expect(csv.suggestedFilename()).toMatch(/^depotdoktor-transaktionen-\d{4}-\d{2}-\d{2}\.csv$/);
-  const csvText = readFileSync(await csv.path(), "utf8");
-  expect(csvText.startsWith("\uFEFFdate;datetime;broker;type;isin")).toBe(true);
-  expect(csvText.trim().split("\r\n")).toHaveLength(9);
+  const csvBytes = readFileSync(await csv.path());
+  expect([...csvBytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+  const csvText = csvBytes.toString("utf8");
+  expect(csvText.startsWith("\uFEFFDatum;Zeitstempel laut Export;Broker;Art;ISIN;Name;Kürzel;Assetklasse;Stück;Kurs;Betrag;")).toBe(true);
+  expect(csvText.endsWith("\r\n")).toBe(true);
+  expect(csvText.replace(/\r\n/g, "")).not.toMatch(/[\r\n]/);
+  expect(csvText).not.toContain("\u2212");
+  const csvRows = Papa.parse<string[]>(csvText.slice(1), { delimiter: ";", newline: "\r\n", skipEmptyLines: true });
+  expect(csvRows.errors).toEqual([]);
+  expect(csvRows.data).toHaveLength(9);
+  expect(csvRows.data.every((row) => row.length === 16)).toBe(true);
+  expect(csvRows.data[2]).toEqual([
+    "06.01.2026",
+    "2026-01-06T08:00:00.000Z",
+    "Trade Republic",
+    "Kauf",
+    "IE00TEST0001",
+    "Testfonds Welt UCITS ETF",
+    "TFW",
+    "ETF",
+    "100",
+    "80",
+    "-8001",
+    "1",
+    "0",
+    "EUR",
+    "SAVINGS_PLAN/BUY",
+    "3",
+  ]);
 
   await page.getByRole("tab", { name: "Performance" }).click();
   await expect(performance).toBeVisible();
