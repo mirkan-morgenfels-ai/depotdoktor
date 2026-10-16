@@ -9,6 +9,7 @@ import { buildReport } from "@/lib/depotdoktor/report";
 import { SAMPLE_CSV_TRADEREPUBLIC, SAMPLE_FILE_NAME, SAMPLE_ROW_COUNT } from "@/lib/depotdoktor/sample";
 import { buildTaxSummary, type SaleCreditInputs } from "@/lib/depotdoktor/tax/summary";
 import { EMPTY_TAX_INPUTS, taxInputsReducer } from "@/lib/depotdoktor/tax/inputs";
+import { defaultTaxYear, isRunningTaxYear, TAX_YEARS } from "@/lib/depotdoktor/tax/year";
 import { buildReportPdfData } from "@/lib/depotdoktor/pdf-data";
 import { BROKER_LABELS } from "@/lib/depotdoktor/labels";
 import { CSV_MIME_TYPE, transactionsToCsv } from "@/lib/depotdoktor/export-csv";
@@ -16,7 +17,7 @@ import { downloadBlob, timestampForFilename } from "@/lib/depotdoktor/download";
 import { FileDrop } from "./FileDrop";
 import { PerformanceTab } from "./PerformanceTab";
 import { AllocationTab } from "./AllocationTab";
-import { TaxTab, TAX_YEARS } from "./TaxTab";
+import { TaxTab } from "./TaxTab";
 import { TransactionsTab } from "./TransactionsTab";
 import { ExportBar } from "./ExportBar";
 import { SampleCard } from "./SampleCard";
@@ -61,6 +62,7 @@ export function DepotDoktorApp() {
       setParsed(result);
       setError(null);
       setTab("performance");
+      setTaxYear(defaultTaxYear(result.transactions, new Date()));
     } else {
       setParsed(null);
       setError(result.error);
@@ -216,6 +218,7 @@ export function DepotDoktorApp() {
           <TaxTab
             summary={taxSummary}
             broker={parsed.broker}
+            runningYear={isRunningTaxYear(taxYear, new Date())}
             onYearChange={setTaxYear}
             onInputChange={dispatchTaxInput}
             onCreditChange={updateSaleCredit}

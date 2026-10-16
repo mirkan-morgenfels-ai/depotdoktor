@@ -13,7 +13,7 @@ function tx(partial: Partial<Transaction> & Pick<Transaction, "id" | "date" | "t
     isin: "IE00TEST0001",
     name: "Testfonds Welt UCITS ETF",
     symbol: null,
-    assetClass: "unknown",
+    assetClass: "etf",
     shares: null,
     price: null,
     fee: "0",

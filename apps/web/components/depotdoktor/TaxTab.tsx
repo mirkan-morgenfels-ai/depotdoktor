@@ -5,28 +5,35 @@ import type { BrokerId } from "@portfolio/csv";
 import { StatTile } from "@portfolio/ui";
 import { formatEur, formatNumber, formatPercent, type Decimal } from "@/lib/depotdoktor/money";
 import { formatDateDe } from "@/lib/depotdoktor/dates";
-import { BASISZINS, FUND_TYPE_LABELS, type FundType } from "@/lib/depotdoktor/tax/constants";
+import { FUND_TYPE_LABELS, type FundType } from "@/lib/depotdoktor/tax/constants";
 import type { PriceField, TaxInputAction } from "@/lib/depotdoktor/tax/inputs";
 import {
   distributionText,
-  MISSING_PRICES_LABEL,
+  FUND_TYPE_MISSING_LABEL,
   noHoldingText,
   PROVISIONAL_PRICE_LABEL,
   TAX_METHOD_NOTES,
+  taxStatusHint,
   type TaxRow,
   type TaxSummary,
 } from "@/lib/depotdoktor/tax/summary";
+import { runningTaxYearText, TAX_YEARS } from "@/lib/depotdoktor/tax/year";
 import { ScrollRegion } from "./ScrollRegion";
 
-export const TAX_YEARS = Object.keys(BASISZINS)
-  .map(Number)
-  .sort((a, b) => b - a);
+const FUND_TYPE_PLACEHOLDER = "Bitte wählen";
+
+const FUND_TYPES = Object.keys(FUND_TYPE_LABELS) as FundType[];
+
+function isFundType(value: string): value is FundType {
+  return (FUND_TYPES as string[]).includes(value);
+}
 
 export const SCALABLE_FUND_TYPE_HINT = "Der Scalable-Export unterscheidet nicht zwischen Aktie und Fonds. Bitte prüfen Sie den Fondstyp.";
 
 export interface TaxTabProps {
   summary: TaxSummary;
   broker: BrokerId;
+  runningYear: boolean;
   onYearChange: (year: number) => void;
   onInputChange: (action: TaxInputAction) => void;
   onCreditChange: (saleId: string, value: string) => void;
@@ -46,6 +53,9 @@ export function keepTogether(text: string): string {
 function positionAnchor(index: number): string {
   return `steuer-position-${index + 1}`;
 }
+
+export const SALE_CREDIT_FUND_TYPE_HINT =
+  "Für Fondsanteile: Wählen Sie oben den Fondstyp, um die in Vorjahren angesetzten Vorabpauschalen einzutragen. Sie mindern den Gewinn (§ 19 Abs. 1 Satz 3 InvStG); bis dahin wird nichts abgezogen.";
 
 interface SaleCreditFieldProps {
   value: string;
@@ -126,6 +136,10 @@ function PriceInput({ row, year, field, label, describedBy, onInputChange }: Pri
   );
 }
 
+function fundTypeMissingText(): string {
+  return `${FUND_TYPE_MISSING_LABEL}: Der Export nennt für diese Position keine Assetklasse. Bis Sie den Fondstyp wählen, wird nichts geschätzt, denn eine falsche Teilfreistellung verfälscht die Steuer. Für Aktien und Anleihen wählen Sie „Kein Fonds (Aktie, Anleihe)“.`;
+}
+
 function missingText(row: TaxRow, year: number): string {
   if (row.sameSourcePrefill) {
     return `Kurse eintragen: Der Export enthält für ${year} keinen eigenen Kurs dieser Position, vorbelegt wäre zweimal derselbe Kurs. Bitte Kurs am 01.01. und 31.12. als Dezimalzahl eintragen.`;
@@ -138,13 +152,13 @@ function joinHints(...parts: Array<string | null>): string | undefined {
   return joined === "" ? undefined : joined;
 }
 
-export function TaxTab({ summary, broker, onYearChange, onInputChange, onCreditChange }: TaxTabProps) {
+export function TaxTab({ summary, broker, runningYear, onYearChange, onInputChange, onCreditChange }: TaxTabProps) {
   const baseId = useId();
   const { year, rows, totals } = summary;
   const missing = totals.status === "missing";
-  const statusHint = missing ? MISSING_PRICES_LABEL : totals.status === "provisional" ? PROVISIONAL_PRICE_LABEL : null;
+  const statusHint = taxStatusHint(totals);
   const amount = (value: Decimal) => (missing ? "–" : formatEur(value));
-  const firstMissing = rows.findIndex((row) => row.estimate === null && row.heldAtYearEnd);
+  const firstMissing = rows.findIndex((row) => row.status === "missing" || row.status === "fundTypeMissing");
   const firstMissingRow = firstMissing >= 0 ? rows[firstMissing] : undefined;
 
   return (
@@ -169,6 +183,11 @@ export function TaxTab({ summary, broker, onYearChange, onInputChange, onCreditC
         <span className="text-[13px] leading-relaxed text-slate">
           Basiszins {year}: <span className="num font-medium text-ink">{formatPercent(summary.basiszins)}</span> · Basisertrag = Wert am
           Jahresanfang × Basiszins&nbsp;×&nbsp;0,7 · Steuersatz 26,375&nbsp;%
+          {runningYear ? (
+            <span className="mt-1 block max-w-[68ch] text-gold-deep" data-testid="tax-running-year">
+              {runningTaxYearText(year)}
+            </span>
+          ) : null}
         </span>
       </div>
 
@@ -181,9 +200,10 @@ export function TaxTab({ summary, broker, onYearChange, onInputChange, onCreditC
             i
           </span>
           <span className="max-w-[68ch]">
-            Tragen Sie unten je Fonds die Kurse am 01.01. und 31.12. ein.{" "}
+            {totals.missingFundType ? "Wählen Sie unten für Positionen ohne Assetklasse den Fondstyp. " : null}
+            {totals.missingPrices ? "Tragen Sie unten je Fonds die Kurse am 01.01. und 31.12. ein. " : null}
             <a href={`#${positionAnchor(firstMissing)}`} className="link font-medium">
-              Zur Kurseingabe für {firstMissingRow.position.name}
+              {firstMissingRow.status === "fundTypeMissing" ? "Zum Fondstyp" : "Zur Kurseingabe"} für {firstMissingRow.position.name}
             </a>
           </span>
         </p>
@@ -224,10 +244,16 @@ export function TaxTab({ summary, broker, onYearChange, onInputChange, onCreditC
 
       {rows.map((row, index) => {
         const { position, settings, estimate, sales, realizedGain } = row;
+        const fundTypeId = `${positionAnchor(index)}-fondstyp`;
         const fundTypeHintId = `${baseId}-${index}-fund-type-hint`;
+        const fundTypeMissingId = `${baseId}-${index}-fund-type-missing`;
         const missingId = `${baseId}-${index}-missing`;
         const showFundTypeHint = broker === "scalable" && position.assetClass === "unknown";
-        const pricesMissing = estimate === null && row.heldAtYearEnd;
+        const fundTypeMissing = row.status === "fundTypeMissing";
+        const fundTypeDescription = [showFundTypeHint ? fundTypeHintId : null, fundTypeMissing ? fundTypeMissingId : null]
+          .filter(Boolean)
+          .join(" ");
+        const pricesMissing = row.status === "missing";
         return (
           <section
             key={position.key}
@@ -250,14 +276,23 @@ export function TaxTab({ summary, broker, onYearChange, onInputChange, onCreditC
                   <label className="block font-medium">
                     Fondstyp
                     <select
-                      value={settings.fundType}
-                      onChange={(e) =>
-                        onInputChange({ type: "setFundType", positionKey: position.key, fundType: e.target.value as FundType })
-                      }
-                      className="field"
-                      aria-describedby={showFundTypeHint ? fundTypeHintId : undefined}
+                      id={fundTypeId}
+                      value={settings.fundType ?? ""}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (isFundType(value)) onInputChange({ type: "setFundType", positionKey: position.key, fundType: value });
+                      }}
+                      className="field scroll-mt-12 sm:scroll-mt-36"
+                      aria-invalid={fundTypeMissing}
+                      aria-describedby={fundTypeDescription === "" ? undefined : fundTypeDescription}
+                      data-testid="tax-fund-type"
                     >
-                      {(Object.keys(FUND_TYPE_LABELS) as FundType[]).map((ft) => (
+                      {settings.fundType === null ? (
+                        <option value="" disabled>
+                          {FUND_TYPE_PLACEHOLDER}
+                        </option>
+                      ) : null}
+                      {FUND_TYPES.map((ft) => (
                         <option key={ft} value={ft}>
                           {FUND_TYPE_LABELS[ft]}
                         </option>
@@ -340,6 +375,14 @@ export function TaxTab({ summary, broker, onYearChange, onInputChange, onCreditC
                   </tbody>
                 </table>
               </ScrollRegion>
+            ) : fundTypeMissing ? (
+              <p
+                id={fundTypeMissingId}
+                className="mt-6 rounded-xl border border-wine/25 bg-wine-soft/50 px-4 py-3 text-sm text-wine"
+                data-testid="tax-fund-type-missing"
+              >
+                <span className="block max-w-[68ch]">{keepTogether(fundTypeMissingText())}</span>
+              </p>
             ) : (
               <p
                 id={missingId}
@@ -354,7 +397,7 @@ export function TaxTab({ summary, broker, onYearChange, onInputChange, onCreditC
               <div className="mt-8 border-t border-line pt-6 text-sm">
                 <h3 className="eyebrow">Verkäufe {year} (FIFO)</h3>
                 <ul className="mt-3 space-y-4 text-slate">
-                  {sales.map(({ sale, creditAllowed, creditInput, creditValid, credit, gain }) => (
+                  {sales.map(({ sale, creditAllowed, creditNeedsFundType, creditInput, creditValid, credit, gain }) => (
                     <li key={sale.id} data-testid="tax-sale">
                       <p className="max-w-[68ch] leading-relaxed">
                         {formatDateDe(sale.date)}: {formatNumber(sale.sharesSold)} Stück verkauft, Erlös {formatEur(sale.proceeds)},
@@ -371,6 +414,14 @@ export function TaxTab({ summary, broker, onYearChange, onInputChange, onCreditC
                           valid={creditValid}
                           onChange={(value) => onCreditChange(sale.id, value)}
                         />
+                      ) : null}
+                      {creditNeedsFundType ? (
+                        <p className="mt-3 max-w-md text-xs leading-relaxed text-gold-deep" data-testid="tax-sale-credit-fund-type">
+                          {keepTogether(SALE_CREDIT_FUND_TYPE_HINT)}{" "}
+                          <a href={`#${fundTypeId}`} className="link font-medium">
+                            Zum Fondstyp
+                          </a>
+                        </p>
                       ) : null}
                     </li>
                   ))}

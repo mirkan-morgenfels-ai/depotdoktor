@@ -4,8 +4,8 @@ import { DISCLAIMER_LONG } from "@portfolio/legal";
 import { projectDisplayUrl } from "@/lib/site";
 import type { PerformanceReport } from "./report";
 import type { TaxRow, TaxSummary } from "./tax/summary";
-import { distributionText, MISSING_PRICES_LABEL, noHoldingText, PROVISIONAL_PRICE_LABEL, TAX_METHOD_NOTES } from "./tax/summary";
-import { FUND_TYPE_LABELS } from "./tax/constants";
+import { distributionText, fundTypeLabel, noHoldingText, TAX_METHOD_NOTES, taxStatusHint } from "./tax/summary";
+import { isRunningTaxYear, RUNNING_TAX_YEAR_LABEL } from "./tax/year";
 import { formatEur, formatNumber, formatPercent } from "./money";
 import { formatDateDe } from "./dates";
 import { timestampForFilename } from "./download";
@@ -56,6 +56,9 @@ function priceText(row: TaxRow, field: "yearStartPrice" | "yearEndPrice"): strin
 function hintText(row: TaxRow, year: number): string {
   if (row.estimate?.fundType === "none") return "Keine Vorabpauschale: kein Fonds (z. B. Einzelaktie oder Anleihe).";
   if (!row.heldAtYearEnd) return noHoldingText(year);
+  if (row.status === "fundTypeMissing") {
+    return "Keine Schätzung: Fondstyp nicht gewählt. Der Export nennt keine Assetklasse; bitte im Steuerreiter den Fondstyp wählen.";
+  }
   return row.sameSourcePrefill
     ? `Keine Schätzung: Der Export enthält für ${year} keinen eigenen Kurs; bitte Kurse am 01.01. und 31.12. eintragen.`
     : "Keine Schätzung: Kurse am 01.01. und 31.12. fehlen; bitte eintragen.";
@@ -103,13 +106,14 @@ export function buildReportPdfData(report: PerformanceReport, tax: TaxSummary, m
   }));
 
   const taxStatus = tax.totals.status;
-  const statusHint = taxStatus === "missing" ? MISSING_PRICES_LABEL : taxStatus === "provisional" ? PROVISIONAL_PRICE_LABEL : null;
+  const statusHint = taxStatusHint(tax.totals);
+  const runningHint = isRunningTaxYear(tax.year, meta.generatedAt) ? RUNNING_TAX_YEAR_LABEL : null;
   const taxAmount = (value: Parameters<typeof formatEur>[0]) => (taxStatus === "missing" ? "–" : formatEur(value));
   const taxSummary = [
     {
       label: `Vorabpauschale ${tax.year}`,
       value: taxAmount(tax.totals.vorabpauschale),
-      hint: joinHints(statusHint, tax.basiszins ? `Basiszins ${formatPercent(tax.basiszins)}` : null),
+      hint: joinHints(statusHint, runningHint, tax.basiszins ? `Basiszins ${formatPercent(tax.basiszins)}` : null),
     },
     { label: "Steuerpflichtig nach Teilfreistellung", value: taxAmount(tax.totals.taxable), hint: joinHints(statusHint) },
     { label: "Geschätzte Steuer auf Vorabpauschale", value: taxAmount(tax.totals.tax), hint: joinHints(statusHint, "vor Sparerpauschbetrag") },
@@ -147,8 +151,8 @@ export function buildReportPdfData(report: PerformanceReport, tax: TaxSummary, m
     );
     const footnoteParts = [
       settings.fundType === "none" || !row.heldAtYearEnd
-        ? FUND_TYPE_LABELS[settings.fundType]
-        : `${FUND_TYPE_LABELS[settings.fundType]} · Kurs 01.01.${tax.year}: ${priceText(row, "yearStartPrice")} · Kurs 31.12.${tax.year}: ${priceText(row, "yearEndPrice")}`,
+        ? fundTypeLabel(settings.fundType)
+        : `${fundTypeLabel(settings.fundType)} · Kurs 01.01.${tax.year}: ${priceText(row, "yearStartPrice")} · Kurs 31.12.${tax.year}: ${priceText(row, "yearEndPrice")}`,
       ...sales,
       ...(position.distributionsInYear.gt(0) ? [distributionText(position, settings.fundType, tax.year)] : []),
     ];
