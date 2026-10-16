@@ -7,7 +7,7 @@ Autor: Mirkan Deniz Günkaya.
 
 Clientseitiger Depot-Steuer- und Performance-Analyzer für deutsche Broker-CSV-Exporte (Trade Republic, Scalable Capital). Keine Server-Uploads, kein Konto, keine Speicherung. Erstes Portfolio-Projekt vor K2 KontoKlar und K3 NetzRadar; die Startseite verlinkt alle drei Projekte und ihre öffentlichen Repos.
 
-Stand 07.10.2026: Parser, Kennzahlen, Steuermodul, Report mit PDF- und CSV-Export und Rechtsseiten umgesetzt, live unter https://depotdoktor.vercel.app/projects/depotdoktor (die frühere Vercel-Adresse bleibt als Alias). Offen sind die Prüfung an echten Exporten und gegen einen externen Vorabpauschale-Rechner (`docs/verifikation.md`).
+Stand 08.10.2026: Parser, Kennzahlen, Steuermodul, Report mit PDF- und CSV-Export und Rechtsseiten umgesetzt, live unter https://depotdoktor.vercel.app/projects/depotdoktor (die frühere Vercel-Adresse bleibt als Alias). Die Vorabpauschale ist gegen die Rechenbeispiele des BMF-Schreibens vom 21.05.2019 (Rz. 18.3, 18.4, 18.11) geprüft. Offen sind die Prüfung an echten Exporten und gegen einen externen Vorabpauschale-Rechner (`docs/verifikation.md`).
 
 ## Quellen
 
@@ -25,7 +25,7 @@ Stand 07.10.2026: Parser, Kennzahlen, Steuermodul, Report mit PDF- und CSV-Expor
 
 - `apps/web/app/projects/depotdoktor/` Seite
 - `apps/web/components/depotdoktor/` Upload, Report-Ansicht, Reiter (Performance, Allokation, Steuer, Transaktionen), `ScrollRegion` für waagrecht scrollbare Tabellen
-- `apps/web/lib/depotdoktor/` Transaktionsmodell, Kennzahlen (`metrics/`), Steuerlogik (`tax/`), Kachel-Texte für Ansicht und PDF (`kpis.ts`), PDF-Daten (`pdf-data.ts`), CSV-Export im deutschen Excel-Format (`export-csv.ts`), Beschriftungen für Buchungsart und Broker (`labels.ts`), Unit-Tests in `__tests__/`
+- `apps/web/lib/depotdoktor/` Transaktionsmodell, Kennzahlen (`metrics/`), Steuerlogik (`tax/`, Vorbelegung des Steuerjahres in `tax/year.ts`), Kachel-Texte für Ansicht und PDF (`kpis.ts`), PDF-Daten (`pdf-data.ts`), CSV-Export im deutschen Excel-Format (`export-csv.ts`), Beschriftungen für Buchungsart und Broker (`labels.ts`), Unit-Tests in `__tests__/`
 - `apps/web/lib/site.ts` Projekte, Navigation, Rechtslinks und Live-Adressen (einzige Stelle mit Live-URLs), `apps/web/lib/metadata.ts` Seitenmetadaten
 - `apps/web/e2e/` Playwright-Tests (`depotdoktor.spec.ts`, `site.spec.ts`, `helpers.ts`)
 - `packages/csv/` Parser, Broker-Erkennung, Normalisierung, Fixtures
@@ -47,7 +47,7 @@ Stand 07.10.2026: Parser, Kennzahlen, Steuermodul, Report mit PDF- und CSV-Expor
 ## Arbeitsweise
 
 - Jede Aufgabe einem Schritt zuordnen: 1 Setup und CI, 2 Parser, 3 Kennzahlen, 4 Steuermodul, 5 Report und PDF, 6 Recht.
-- Offene Entscheidungen (Fondstyp-Bestimmung, Bezugsgröße bei unterjährigem Kauf, Steuerjahr-Vorbelegung, Formate DKB/ING/comdirect) mit Optionen und Empfehlung vorlegen und auf den Autor warten.
+- Offene Entscheidungen (derzeit Formate DKB/ING/comdirect) mit Optionen und Empfehlung vorlegen und auf den Autor warten. Fondstyp ohne Assetklasse, Bezugsgröße bei unterjährigem Kauf und Steuerjahr-Vorbelegung sind seit 08.10.2026 entschieden bzw. gegen das BMF geprüft (`docs/verifikation.md`, Abschnitt „Restliche Entscheidungen 08.10.2026“).
 - Ehrliche Ergebnisse: Was nicht geprüft ist, steht als offen in `docs/verifikation.md` und im README.
 
 ## Befehle
@@ -96,7 +96,7 @@ Stand 07.10.2026: Parser, Kennzahlen, Steuermodul, Report mit PDF- und CSV-Expor
 
 ## Test-Stand
 
-Stand 08.10.2026: siehe README („Tests“) und `docs/verifikation.md` (Abschnitte „Nachkontrolle 07.10.2026“, „Nachbesserung 07.10.2026“ und „CSV-Export für deutsches Excel 08.10.2026“). Dazu ein bewusst offener `todo` für Fall D. `pnpm audit --prod`: keine Meldung; `pnpm audit` meldet nur braces über `eslint-config-next` (nur Linting, ohne Patch).
+Stand 08.10.2026: 279 Unit-Tests (csv 50, pdf 2, web 227) und 29 Playwright-Tests grün, kein offener `todo` mehr (Fall D ist seit 08.10.2026 ein Test gegen BMF Rz. 18.11). Einzelheiten im README („Tests“) und in `docs/verifikation.md` (Abschnitte „Nachkontrolle 07.10.2026“, „Nachbesserung 07.10.2026“, „CSV-Export für deutsches Excel 08.10.2026“ und „Restliche Entscheidungen 08.10.2026“ mit „Nachbesserung nach der Prüfung 08.10.2026“). Die E2E-Tests in `depotdoktor.spec.ts` stellen die Browser-Uhr auf den 08.10.2026, weil das vorbelegte Steuerjahr vom Datum abhängt. `pnpm audit --prod`: keine Meldung; `pnpm audit` meldet nur braces über `eslint-config-next` (nur Linting, ohne Patch; zuletzt am 08.10.2026 nach den restlichen Entscheidungen geprüft).
 
 ## Definition of Done
 
@@ -109,7 +109,7 @@ Stand 08.10.2026: siehe README („Tests“) und `docs/verifikation.md` (Abschni
 
 - ~~Kicker „Projekt K1/K2/K3“ auf Start- und Projektseite.~~ Entschieden am 08.10.2026: „Projekt 01/02/03“ wie auf den Projektkarten.
 - ~~Impressum ohne ladungsfähige Anschrift (`docs/verifikation.md`, Rechtstexte Punkt 1).~~ Entschieden am 07.10.2026 vom Autor, gemeinsam für K1, K2 und K3: Das Impressum nennt nur Name, Ort und E-Mail. `docs/verifikation.md` führt dazu seit 08.10.2026 nur noch diesen Statussatz statt einer Abwägung; die Rechtstexte sind unverändert.
-- Standard-Fondstyp bei Positionen ohne Assetklasse (derzeit Aktienfonds) und Vorbelegung des Steuerjahres.
-- Normangabe im Disclaimer behalten oder nur auf das BaFin-Merkblatt verweisen.
+- ~~Standard-Fondstyp bei Positionen ohne Assetklasse (derzeit Aktienfonds) und Vorbelegung des Steuerjahres.~~ Entschieden am 08.10.2026 (vom Autor mit „Erledige auch die restlichen offenen Punkte“ an Claude delegiert): Positionen ohne Assetklasse (Scalable-Export) starten mit „Bitte wählen“; bis zur Wahl zeigen Steuerkacheln und PDF „–“ mit „Fondstyp wählen“, weil eine falsche Teilfreistellung (§ 20 InvStG) die Steuer verfälscht. Positionen ohne Bestand am 31.12. brauchen keine Wahl, das Feld für angesetzte Vorabpauschalen erscheint erst nach der Wahl eines Fonds-Typs; bis dahin steht an Verkäufen mit Anteilen aus Vorjahren ein Hinweis mit der Sprungmarke „Zum Fondstyp“. Vorbelegt ist das letzte abgeschlossene Steuerjahr mit Bestand am 31.12., sonst das Jahr der letzten Depotbuchung (vorbelegte Kurse „vorläufig“); für ein laufendes Jahr weisen Steuerreiter und PDF darauf hin. Begründung und Tests in `docs/verifikation.md`, Abschnitt „Restliche Entscheidungen 08.10.2026“, Punkt 1 und 2.
+- ~~Normangabe im Disclaimer behalten oder nur auf das BaFin-Merkblatt verweisen.~~ Entschieden am 08.10.2026: Die Normangabe bleibt. „§ 2 Abs. 8 Satz 1 Nr. 10 WpHG“ ist am 08.10.2026 auf gesetze-im-internet.de geprüft und korrekt (Nr. 10 definiert die Anlageberatung); `packages/legal` ist unverändert. Einzelheiten in `docs/verifikation.md`, Abschnitt „Restliche Entscheidungen 08.10.2026“, Punkt 3.
 - ~~Ob `CLAUDE.md` öffentlich bleibt (derzeit: bereinigt öffentlich).~~ Entschieden am 08.10.2026, gemeinsam für K1, K2 und K3: bleibt bereinigt öffentlich, als transparenter Nachweis KI-gestützter Arbeit. Rechnerspezifisches steht weiter nur in der nicht versionierten `CLAUDE.local.md`.
 - ~~CSV-Export „Transaktionen als CSV“: maschinenlesbar oder deutsches Excel-Format (bisher eine Mischung).~~ Entschieden am 08.10.2026: deutsches Excel-Format, weil die Zielgruppe deutsche Privatanleger sind, die die Datei per Doppelklick öffnen; im alten Format las ein deutsches Excel Beträge mit Dezimalpunkt als Text oder Datum. Semikolon, Dezimalkomma ohne Tausenderpunkt, deutsche Spaltenköpfe, Datum TT.MM.JJJJ, UTF-8 mit BOM, CRLF, Quoting, ASCII-Minus, volle Genauigkeit ohne Rundung; Apostroph vor Textfeldern, die mit `=`, `+`, `-`, `@`, Tab oder CR beginnen, nie vor Zahlenfeldern. Maschinenlesbare Rohdaten liefert der Original-Export des Brokers. Einzelheiten und Excel-Probe in `docs/verifikation.md`, Abschnitt „CSV-Export für deutsches Excel 08.10.2026“.

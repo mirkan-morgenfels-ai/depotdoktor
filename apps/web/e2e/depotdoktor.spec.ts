@@ -2,13 +2,24 @@ import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import Papa from "papaparse";
-import { originOf, watchErrors } from "./helpers";
+import { originOf, PRIOR_YEAR_SALE_FILE, SALE_CREDIT_FUND_TYPE_HINT, watchErrors } from "./helpers";
 
 const scalableFixture = path.resolve(__dirname, "../../../packages/csv/fixtures/scalable-synthetic.csv");
 const tradeRepublicFixture = path.resolve(__dirname, "../../../packages/csv/fixtures/traderepublic-synthetic.csv");
 const unknownFixture = path.resolve(__dirname, "../../../packages/csv/fixtures/unknown-format.csv");
 const tradeRepublicText = readFileSync(tradeRepublicFixture, "utf8");
 const TAB_NAMES = ["Performance", "Allokation", "Steuer", "Transaktionen"];
+const TODAY = new Date("2026-10-08T10:00:00+02:00");
+const RUNNING_2026 =
+  "Das Steuerjahr 2026 läuft noch. Den Kurs am 31.12.2026 gibt es erst nach Jahresende; bis dahin ist die Vorabpauschale 2026 eine Vorschau.";
+const SCALABLE_HINT = "Der Scalable-Export unterscheidet nicht zwischen Aktie und Fonds. Bitte prüfen Sie den Fondstyp.";
+const FUND_TYPE_MISSING =
+  "Fondstyp wählen: Der Export nennt für diese Position keine Assetklasse. Bis Sie den Fondstyp wählen, wird nichts geschätzt, denn eine falsche Teilfreistellung verfälscht die Steuer. Für Aktien und Anleihen wählen Sie „Kein Fonds (Aktie, Anleihe)“.";
+const TAX_TILES = ["tax-vorabpauschale", "tax-taxable", "tax-estimated-tax"];
+
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(TODAY);
+});
 
 async function loadSample(page: Page) {
   await page.getByRole("button", { name: "Beispieldatei laden" }).click();
@@ -87,8 +98,12 @@ test("Beispieldatei: Report mit allen Kennzahlen, kein Upload", async ({ page, b
   await expect(page.getByTestId("allocation-asset-class").getByTestId("allocation-bar").first()).toBeVisible();
 
   await page.getByRole("tab", { name: "Steuer" }).click();
+  await expect(page.getByTestId("tax-year")).toHaveValue("2026");
+  await expect(page.getByTestId("tax-running-year")).toHaveText(RUNNING_2026);
   await expect(page.getByTestId("tax-position")).toHaveCount(2);
   await expect(page.getByTestId("tax-tab")).toContainText("FIFO");
+  await expect(taxPosition(page, "Testfonds Welt UCITS ETF").getByRole("combobox", { name: "Fondstyp" })).toHaveValue("equity");
+  await expect(page.getByTestId("tax-fund-type-missing")).toHaveCount(0);
   const stock = taxPosition(page, "Musterwerk AG");
   await expect(stock.getByRole("combobox", { name: "Fondstyp" })).toHaveValue("none");
   await expect(stock.getByRole("combobox", { name: "Fondstyp" }).locator("option:checked")).toHaveText("Kein Fonds (Aktie, Anleihe)");
@@ -216,7 +231,7 @@ test("Trade-Republic-Datei per Upload", async ({ page }) => {
   await expect(page.getByTestId("allocation-asset-class")).toContainText("ETF");
 });
 
-test("Scalable-Datei per Upload: übersprungene Zeile, gleicher Zeitraum, Hinweise zu Fondstyp und Assetklasse", async ({ page }) => {
+test("Scalable-Datei per Upload: übersprungene Zeile, gleicher Zeitraum, Fondstyp „Bitte wählen“ bis zur Auswahl", async ({ page }) => {
   await page.goto("/projects/depotdoktor");
   await page.getByTestId("file-input").setInputFiles(scalableFixture);
   await expect(page.getByTestId("report-section")).toContainText("6 Buchungen · 1 übersprungen");
@@ -229,15 +244,50 @@ test("Scalable-Datei per Upload: übersprungene Zeile, gleicher Zeitraum, Hinwei
   await expect(page.getByTestId("allocation-unassigned-hint")).toHaveText("Nicht zugeordnet: Der Export enthält keine Assetklasse.");
 
   await page.getByRole("tab", { name: "Steuer" }).click();
+  await expect(page.getByTestId("tax-year")).toHaveValue("2026");
   await expect(page.getByTestId("tax-position")).toHaveCount(2);
   const hints = page.getByTestId("tax-fund-type-hint");
   await expect(hints).toHaveCount(2);
-  await expect(hints.first()).toHaveText("Der Scalable-Export unterscheidet nicht zwischen Aktie und Fonds. Bitte prüfen Sie den Fondstyp.");
+  await expect(hints.first()).toHaveText(SCALABLE_HINT);
   const fundTypeSelects = page.getByRole("combobox", { name: "Fondstyp" });
   await expect(fundTypeSelects).toHaveCount(2);
   for (const select of await fundTypeSelects.all()) {
-    await expect(select).toHaveAccessibleDescription(/^Der Scalable-Export unterscheidet nicht zwischen Aktie und Fonds\./);
+    await expect(select).toHaveValue("");
+    await expect(select.locator("option:checked")).toHaveText("Bitte wählen");
+    await expect(select).toHaveAttribute("aria-invalid", "true");
+    await expect(select).toHaveAccessibleDescription(`${SCALABLE_HINT} ${FUND_TYPE_MISSING}`);
   }
+  await expect(page.getByTestId("tax-fund-type-missing")).toHaveCount(2);
+  await expect(page.getByTestId("tax-fund-type-missing").first()).toHaveText(FUND_TYPE_MISSING);
+  for (const testId of TAX_TILES) {
+    await expect(page.getByTestId(testId)).toHaveText(/–\s*Fondstyp wählen/);
+    await expect(page.getByTestId(testId)).not.toContainText(/\d,\d\d\s€/);
+  }
+  const jumpHint = page.getByTestId("tax-prices-hint");
+  await expect(jumpHint).toContainText("Wählen Sie unten für Positionen ohne Assetklasse den Fondstyp.");
+  await expect(jumpHint).not.toContainText("Kurse am 01.01.");
+  await expect(jumpHint.getByRole("link")).toHaveText("Zum Fondstyp für Musterwerk AG");
+
+  const stock = taxPosition(page, "Musterwerk AG");
+  const stockType = stock.getByRole("combobox", { name: "Fondstyp" });
+  await stockType.selectOption("none");
+  await expect(stockType).toHaveAttribute("aria-invalid", "false");
+  await expect(stockType).toHaveAccessibleDescription(SCALABLE_HINT);
+  await expect(stockType.locator("option", { hasText: "Bitte wählen" })).toHaveCount(0);
+  await expect(stock).toContainText("Kein Fonds: Für diese Position wird keine Vorabpauschale berechnet.");
+  await expect(page.getByTestId("tax-vorabpauschale")).toHaveText(/–\s*Fondstyp wählen/);
+  await expect(jumpHint.getByRole("link")).toHaveText("Zum Fondstyp für Testfonds Welt UCITS ETF");
+
+  const etf = taxPosition(page, "Testfonds Welt UCITS ETF");
+  await etf.getByRole("combobox", { name: "Fondstyp" }).selectOption("equity");
+  await expect(page.getByTestId("tax-fund-type-missing")).toHaveCount(0);
+  await expect(page.getByTestId("tax-vorabpauschale")).toHaveText(/^Vorabpauschale 2026\s*–\s*Kurse eintragen/);
+  await expect(jumpHint.getByRole("link")).toHaveText("Zur Kurseingabe für Testfonds Welt UCITS ETF");
+  await etf.getByRole("textbox", { name: "Kurs 01.01.2026" }).fill("80,00");
+  await etf.getByRole("textbox", { name: "Kurs 31.12.2026" }).fill("95,00");
+  await expect(page.getByTestId("tax-vorabpauschale")).toHaveText(/^Vorabpauschale 2026\s*179,20\s€\s*Summe aller Positionen$/);
+  await expect(page.getByTestId("tax-taxable")).toHaveText(/^Steuerpflichtig nach Teilfreistellung\s*125,44\s€$/);
+  await expect(page.getByTestId("tax-estimated-tax")).toHaveText(/^Geschätzte Steuer auf Vorabpauschale\s*33,08\s€/);
 });
 
 test("Unbekanntes Format bricht mit Meldung ab", async ({ page }) => {
@@ -294,34 +344,42 @@ test("UTF-16-Export mit BOM wird gelesen", async ({ page }) => {
 });
 
 test("Angesetzte Vorabpauschalen mindern den Veräußerungsgewinn, Andere Datei setzt sie zurück", async ({ page }) => {
-  const priorYearSaleFile = {
-    name: "verkauf-vorjahr.csv",
-    mimeType: "text/csv",
-    buffer: Buffer.from(
-      [
-        "date;time;status;reference;description;assetType;type;isin;shares;price;amount;fee;tax;currency",
-        '2025-03-03;09:00:00;Executed;"E2E0001";"Testfonds Welt UCITS ETF";Security;Buy;IE00TEST0001;10;100,00;-1000,00;0,00;0,00;EUR',
-        '2026-05-04;09:00:00;Executed;"E2E0002";"Testfonds Welt UCITS ETF";Security;Sell;IE00TEST0001;10;120,00;1200,00;0,00;0,00;EUR',
-        "",
-      ].join("\n"),
-      "utf8",
-    ),
-  };
   await page.goto("/projects/depotdoktor");
-  await page.getByTestId("file-input").setInputFiles(priorYearSaleFile);
+  await page.getByTestId("file-input").setInputFiles(PRIOR_YEAR_SALE_FILE);
   await expect(page.getByTestId("report-section")).toContainText("2 Buchungen");
   await page.getByRole("tab", { name: "Steuer" }).click();
+  const year = page.getByTestId("tax-year");
+  const fundType = page.getByRole("combobox", { name: "Fondstyp" });
   const sale = page.getByTestId("tax-sale");
   const credit = sale.getByTestId("tax-sale-credit");
+  const creditHint = sale.getByTestId("tax-sale-credit-fund-type");
   const realizedTile = page.getByTestId("tax-realized-gain");
+  await expect(year).toHaveValue("2025");
+  await expect(page.getByTestId("tax-running-year")).toHaveCount(0);
+  await expect(page.getByTestId("tax-vorabpauschale")).toHaveText(/^Vorabpauschale 2025\s*–\s*Fondstyp wählen/);
+  await expect(sale).toHaveCount(0);
+
+  await year.selectOption("2026");
+  await expect(page.getByTestId("tax-running-year")).toHaveText(RUNNING_2026);
   await expect(sale).toHaveCount(1);
   await expect(sale.getByTestId("tax-sale-gain")).toHaveText("200,00 €");
   await expect(realizedTile).toContainText("Realisierte Gewinne 2026 (FIFO)");
   await expect(realizedTile).toContainText("200,00 €");
   await expect(page.getByTestId("tax-no-holding")).toHaveText("Keine Vorabpauschale: kein Bestand am 31.12.2026 (§ 18 Abs. 3 InvStG).");
   await expect(page.getByTestId("tax-prices-missing")).toHaveCount(0);
+  await expect(page.getByTestId("tax-fund-type-missing")).toHaveCount(0);
   await expect(page.getByTestId("tax-price-provisional")).toHaveCount(0);
   await expect(page.getByTestId("tax-vorabpauschale")).toHaveText(/^Vorabpauschale 2026\s*0,00\s€\s*Summe aller Positionen$/);
+  await expect(fundType).toHaveValue("");
+  await expect(fundType).toHaveAttribute("aria-invalid", "false");
+  await expect(credit).toHaveCount(0);
+  await expect(creditHint).toHaveText(SALE_CREDIT_FUND_TYPE_HINT);
+  await creditHint.getByRole("link", { name: "Zum Fondstyp" }).click();
+  await expect(fundType).toBeFocused();
+  await expect(fundType).toBeInViewport();
+
+  await fundType.selectOption("equity");
+  await expect(creditHint).toHaveCount(0);
   await expect(credit).toHaveAccessibleName("Für diese Anteile in Vorjahren angesetzte Vorabpauschalen (€, optional)");
   await expect(credit).toHaveAccessibleDescription(/^Summe der Beträge, die Ihre Bank .*\sInvStG\.$/);
 
@@ -332,12 +390,12 @@ test("Angesetzte Vorabpauschalen mindern den Veräußerungsgewinn, Andere Datei 
   await expect(page.getByRole("textbox", { name: "Kurs 01.01.2026" })).toHaveValue("100,00");
   await expect(page.getByRole("textbox", { name: "Kurs 31.12.2026" })).toHaveValue("120,00");
 
-  await page.getByTestId("tax-year").selectOption("2025");
+  await year.selectOption("2025");
   await expect(page.getByRole("textbox", { name: "Kurs 01.01.2025" })).toHaveValue("");
   await expect(page.getByRole("textbox", { name: "Kurs 31.12.2025" })).toHaveValue("100,00");
   await expect(page.getByTestId("tax-sale")).toHaveCount(0);
 
-  await page.getByTestId("tax-year").selectOption("2026");
+  await year.selectOption("2026");
   await expect(credit).toHaveValue("25,30");
   await expect(sale.getByTestId("tax-sale-gain")).toHaveText("174,70 €");
 
@@ -352,10 +410,15 @@ test("Angesetzte Vorabpauschalen mindern den Veräußerungsgewinn, Andere Datei 
   await expect(sale.getByTestId("tax-sale-gain")).toHaveText("174,70 €");
   await page.getByRole("button", { name: "Andere Datei" }).click();
   await expect(page.getByTestId("report-section")).toHaveCount(0);
-  await page.getByTestId("file-input").setInputFiles(priorYearSaleFile);
+  await page.getByTestId("file-input").setInputFiles(PRIOR_YEAR_SALE_FILE);
   await expect(page.getByTestId("report-section")).toContainText("2 Buchungen");
   await page.getByRole("tab", { name: "Steuer" }).click();
-  await page.getByTestId("tax-year").selectOption("2026");
+  await expect(year).toHaveValue("2025");
+  await year.selectOption("2026");
+  await expect(fundType).toHaveValue("");
+  await expect(credit).toHaveCount(0);
+  await expect(creditHint).toHaveCount(1);
+  await fundType.selectOption("equity");
   await expect(credit).toHaveValue("");
   await expect(sale.getByTestId("tax-sale-gain")).toHaveText("200,00 €");
   await expect(sale).not.toContainText("angesetzte Vorabpauschalen 25,30 €");
@@ -406,8 +469,31 @@ test("Kurse im Steuerreiter gelten je Steuerjahr, der Fondstyp für alle Jahre, 
     }
     await expect(page.getByTestId("tax-prices-missing")).toContainText("Kurse eintragen");
   };
+  const expectFundTypeMissingTiles = async (y: number) => {
+    for (const tile of tiles) {
+      const element = page.getByTestId(tile.testId);
+      await expect(element).toHaveText(new RegExp(`^${tile.label(y)}\\s*–\\s*Fondstyp wählen`));
+      await expect(element).not.toContainText(/\d,\d\d\s€/);
+    }
+    await expect(page.getByTestId("tax-fund-type-missing")).toHaveText(FUND_TYPE_MISSING);
+    await expect(page.getByTestId("tax-prices-missing")).toHaveCount(0);
+    await expect(fundType).toHaveValue("");
+    await expect(fundType).toHaveAttribute("aria-invalid", "true");
+  };
 
-  await expect(year).toHaveValue("2026");
+  await expect(year).toHaveValue("2025");
+  await expect(page.getByTestId("tax-running-year")).toHaveCount(0);
+  await expect(start(2025)).toHaveValue("");
+  await expect(end(2025)).toHaveValue("100,00");
+  await expectFundTypeMissingTiles(2025);
+
+  await fundType.selectOption("equity");
+  await expect(fundType).toHaveAttribute("aria-invalid", "false");
+  await expect(page.getByTestId("tax-fund-type-missing")).toHaveCount(0);
+  await expectMissingTiles(2025);
+
+  await year.selectOption("2026");
+  await expect(page.getByTestId("tax-running-year")).toHaveText(RUNNING_2026);
   await expect(start(2026)).toHaveValue("100,00");
   await expect(end(2026)).toHaveValue("110,00");
   await expect(page.getByTestId("tax-price-provisional")).toHaveCount(2);
@@ -447,17 +533,18 @@ test("Kurse im Steuerreiter gelten je Steuerjahr, der Fondstyp für alle Jahre, 
   await expect(page.getByTestId("report-section")).toContainText("2 Buchungen");
   await page.getByRole("tab", { name: "Steuer" }).click();
 
-  await year.selectOption("2026");
-  await expect(fundType).toHaveValue("equity");
-  await expect(start(2026)).toHaveValue("100,00");
-  await expect(end(2026)).toHaveValue("110,00");
-  await expectTaxTiles(2026, ["33,60", "23,52", "6,20"], true);
-
-  await year.selectOption("2025");
-  await expect(fundType).toHaveValue("equity");
+  await expect(year).toHaveValue("2025");
   await expect(start(2025)).toHaveValue("");
   await expect(end(2025)).toHaveValue("100,00");
-  await expectMissingTiles(2025);
+  await expectFundTypeMissingTiles(2025);
+
+  await year.selectOption("2026");
+  await expect(start(2026)).toHaveValue("100,00");
+  await expect(end(2026)).toHaveValue("110,00");
+  await expectFundTypeMissingTiles(2026);
+
+  await fundType.selectOption("equity");
+  await expectTaxTiles(2026, ["33,60", "23,52", "6,20"], true);
 });
 
 test("Beispieldatei im Steuerreiter: ohne Kurs 01.01. keine Schein-Steuer, mit Beispielkursen eine echte Rechnung", async ({ page }) => {
@@ -465,6 +552,8 @@ test("Beispieldatei im Steuerreiter: ohne Kurs 01.01. keine Schein-Steuer, mit B
   await loadSample(page);
   await page.getByRole("tab", { name: "Steuer" }).click();
 
+  await expect(page.getByTestId("tax-year")).toHaveValue("2026");
+  await expect(page.getByTestId("tax-running-year")).toHaveText(RUNNING_2026);
   const etf = taxPosition(page, "Testfonds Welt UCITS ETF");
   const etfStart = etf.getByRole("textbox", { name: "Kurs 01.01.2026" });
   const etfEnd = etf.getByRole("textbox", { name: "Kurs 31.12.2026" });
@@ -570,6 +659,22 @@ test("Mobil 320 px: alle vier Reiter stehen im Raster vollständig im Bild", asy
     const scrollWidth = await page.evaluate(() => (document.scrollingElement ?? document.documentElement).scrollWidth);
     expect(scrollWidth, tab).toBeLessThanOrEqual(320);
   }
+
+  await page.getByRole("button", { name: "Andere Datei" }).click();
+  await page.getByTestId("file-input").setInputFiles(scalableFixture);
+  await page.getByRole("tab", { name: "Steuer" }).click();
+  await expect(page.getByTestId("tax-fund-type-missing")).toHaveCount(2);
+  await expect(page.getByTestId("tax-running-year")).toBeVisible();
+  const scrollWidth = await page.evaluate(() => (document.scrollingElement ?? document.documentElement).scrollWidth);
+  expect(scrollWidth, "Steuer ohne Fondstyp").toBeLessThanOrEqual(320);
+
+  await page.getByRole("button", { name: "Andere Datei" }).click();
+  await page.getByTestId("file-input").setInputFiles(PRIOR_YEAR_SALE_FILE);
+  await page.getByRole("tab", { name: "Steuer" }).click();
+  await page.getByTestId("tax-year").selectOption("2026");
+  await expect(page.getByTestId("tax-sale-credit-fund-type")).toBeVisible();
+  const saleScrollWidth = await page.evaluate(() => (document.scrollingElement ?? document.documentElement).scrollWidth);
+  expect(saleScrollWidth, "Verkauf ohne Fondstyp").toBeLessThanOrEqual(320);
 });
 
 test("Rechtsseiten sind erreichbar und verlinkt", async ({ page }) => {

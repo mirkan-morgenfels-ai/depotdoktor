@@ -1,5 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
-import { AXE_WIDTHS, axeViolations, originOf, watchErrors } from "./helpers";
+import { resolve } from "node:path";
+import { AXE_WIDTHS, axeViolations, originOf, PRIOR_YEAR_SALE_FILE, watchErrors } from "./helpers";
+
+const SCALABLE_FIXTURE = resolve(__dirname, "../../../packages/csv/fixtures/scalable-synthetic.csv");
 
 const LEGAL_PAGES = [
   { path: "/impressum", heading: "Impressum" },
@@ -258,6 +261,19 @@ for (const width of AXE_WIDTHS) {
       await expect(page.getByRole("tab", { name: tab })).toHaveAttribute("aria-selected", "true");
       results[`/projects/depotdoktor (${tab})`] = await axeViolations(page);
     }
+
+    await page.getByRole("button", { name: "Andere Datei" }).click();
+    await page.getByTestId("file-input").setInputFiles(SCALABLE_FIXTURE);
+    await page.getByRole("tab", { name: "Steuer" }).click();
+    await expect(page.getByTestId("tax-fund-type-missing")).toHaveCount(2);
+    results["/projects/depotdoktor (Steuer, Scalable ohne Fondstyp)"] = await axeViolations(page);
+
+    await page.getByRole("button", { name: "Andere Datei" }).click();
+    await page.getByTestId("file-input").setInputFiles(PRIOR_YEAR_SALE_FILE);
+    await page.getByRole("tab", { name: "Steuer" }).click();
+    await page.getByTestId("tax-year").selectOption("2026");
+    await expect(page.getByTestId("tax-sale-credit-fund-type")).toBeVisible();
+    results["/projects/depotdoktor (Steuer, Verkauf ohne Fondstyp)"] = await axeViolations(page);
 
     for (const [path, violations] of Object.entries(results)) {
       expect(violations, path).toEqual([]);
