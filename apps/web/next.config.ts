@@ -31,6 +31,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["@portfolio/charts", "@portfolio/csv", "@portfolio/legal", "@portfolio/pdf", "@portfolio/ui"],
   poweredByHeader: false,
+  agentRules: false,
   async headers() {
     return [{ source: "/(.*)", headers: SECURITY_HEADERS }];
   },

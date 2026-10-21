@@ -22,6 +22,10 @@ Ziel: TTWROR und IRR getrennt ausweisen und die Vorabpauschale nachvollziehbar s
 - Exportiert den Report als PDF und die normalisierten Transaktionen als CSV für ein deutsches Excel (Abschnitt „CSV-Export“).
 - Verarbeitet alles im Browser. Es gibt keinen Upload, keinen Account und keine Speicherung. Eine Content-Security-Policy (`default-src 'self'`, `connect-src 'self' data:`, `form-action 'self'`) verhindert technisch, dass Skripte der Seite Daten per fetch oder XHR, als Bild-, Skript- oder Formularanfrage an fremde Server senden. Fremde Seiten werden nur aufgerufen, wenn Sie einen externen Link anklicken.
 
+## Status
+
+Stand 20.10.2026: Version 1 ist umgesetzt und live (siehe „Roadmap“). Geprüft sind die Parser an synthetischen Testdateien sowie Kennzahlen und Steuerlogik an Handrechnungen und an den Rechenbeispielen des BMF (siehe „Tests“). Offen ist die Prüfung an echten Exporten von Trade Republic und Scalable Capital, die die Daten des Autors braucht; Anleitung, Prüfliste und Prüfprotokoll dafür stehen in [docs/pruefung-echte-exporte.md](docs/pruefung-echte-exporte.md). Ebenfalls offen ist der Abgleich mit dem Vorabpauschale-Rechner der Stiftung Warentest ([docs/verifikation.md](docs/verifikation.md)).
+
 ## Screenshots
 
 ![Reiter Performance mit Kennzahlen und Wertverlauf](docs/screenshots/performance.png)
@@ -52,6 +56,8 @@ CSV-Datei (Browser)
 | Trade Republic PDF-Abrechnungen | geplant | Fallback für ältere Zeiträume |
 
 Testdateien für jeden unterstützten Anbieter liegen unter [`packages/csv/fixtures/`](packages/csv/fixtures/). Sie sind synthetisch und enthalten keine echten Daten.
+
+Den CSV-Export der Transaktionen bietet Scalable Capital laut eigener FAQ nur im PRIME+ Broker an, nicht im FREE Broker (Stand 20.10.2026). Exportwege beider Broker mit Quellen stehen in [docs/pruefung-echte-exporte.md](docs/pruefung-echte-exporte.md).
 
 ## Kennzahlen und Steuerlogik
 
@@ -89,11 +95,11 @@ Die CSV-Datei wird ausschließlich im Browser gelesen und verarbeitet. Inhalte I
 
 ## Tech-Stack
 
-Next.js 15 (App Router), TypeScript (strict), Tailwind CSS, Papa Parse, Recharts, @react-pdf/renderer, decimal.js für Geldbeträge, Vitest, Playwright, pnpm Workspaces, GitHub Actions, Vercel.
+Next.js 16 (App Router, Turbopack), TypeScript 5.9 (strict), Tailwind CSS 4, Papa Parse, Recharts, @react-pdf/renderer, decimal.js für Geldbeträge, ESLint 10, Vitest 5, Playwright, pnpm Workspaces, GitHub Actions, Vercel. TypeScript 7 ist noch nicht im Einsatz, weil typescript-eslint es nicht unterstützt (Einzelheiten in [docs/verifikation.md](docs/verifikation.md), Abschnitt „Framework-Migration 17.10.2026“).
 
 ## Lokale Ausführung
 
-Voraussetzungen: Node.js `^20.19.0` oder `>=22.12.0`, pnpm 10 (Version über `packageManager` festgelegt, z. B. mit `corepack enable`).
+Voraussetzungen: Node.js `^22.13.0`, `^24.0.0` oder `>=26.0.0`, pnpm 10 (Version über `packageManager` festgelegt, z. B. mit `corepack enable`).
 
 ```bash
 git clone https://github.com/mirkan-morgenfels-ai/depotdoktor.git
@@ -113,7 +119,7 @@ pnpm test:e2e
 
 `pnpm test` führt die Unit-Tests in `packages/csv`, `packages/pdf` und `apps/web` aus. `pnpm test:e2e` startet den Dev-Server (mit `CI=true` nach `pnpm build` den Produktionsserver, wie in der CI) und lädt die Testdateien im Browser. Der Port ist 3000, über `PORT` wählbar (z. B. `PORT=3101`); ohne installierte Playwright-Browser kann ein vorhandenes Chromium über `PLAYWRIGHT_CHROMIUM_PATH=/pfad/zu/chromium` angegeben werden.
 
-Stand 08.10.2026: 279 Unit-Tests (csv 50, pdf 2, web 227) und 29 Playwright-Tests, alle grün. Der frühere offene Test (`todo`) für Fall D ist seit 08.10.2026 ein echter Test gegen das BMF-Beispiel Rz. 18.11, siehe [docs/verifikation.md](docs/verifikation.md).
+Stand 20.10.2026 (zuletzt geprüft; Zahlen unverändert seit der Umstellung auf Next.js 16, ESLint 10 und Vitest 5 am 17.10.2026): 279 Unit-Tests (csv 50, pdf 2, web 227) und 29 Playwright-Tests, alle grün. Der frühere offene Test (`todo`) für Fall D ist seit 08.10.2026 ein echter Test gegen das BMF-Beispiel Rz. 18.11, siehe [docs/verifikation.md](docs/verifikation.md).
 
 Unit-Tests decken TTWROR (auch mit Kaufgebühr des ersten Kaufs und Kauf nach Vollverkauf), IRR (einschließlich Divergenz-Fallback), Volatilität, Max Drawdown (auch nach Vollverkauf), die Bewertungspunkte an Depotbuchungen, Vorabpauschale (Normalfall, Wertzuwachs unter Basisertrag, Verlustjahr, unterjähriger Kauf mit Zwölftelung der Vorabpauschale, Bruttoausschüttungen je Anteil zum Zahltag, kein Bestand am 31.12.), die Rechenbeispiele des BMF-Schreibens vom 21.05.2019 (Rz. 18.3, 18.4 und 18.11), die Vorbelegung des Steuerjahres, Positionen ohne Assetklasse („Fondstyp wählen“), die Kursvorbelegung je Steuerjahr mit „vorläufig“ und „Kurse eintragen“, FIFO mit angesetzten Vorabpauschalen und mit Steuerabzug beim Verkauf, Kurseingaben je Steuerjahr mit Fondstyp je Position, die Dateityp-Erkennung (PDF, ZIP, Binärdaten, Windows-1252, UTF-16 mit BOM), den CSV-Export (BOM, CRLF, Quoting, Dezimalkomma, Vorzeichen, Injektionsschutz, Rücklesen mit Papa Parse) und den PDF-Report (zwölf Kennzahlen, übersprungene Zeilen, Hinweise, Fußzeile, Disclaimer auf jeder Seite) ab, jeweils mit von Hand gerechneten Erwartungswerten. Die E2E-Tests laufen mit fest eingestelltem Datum (08.10.2026), laden die Testdateien beider Broker hoch, auch als UTF-16-Datei, prüfen Kennzahlen und Diagramme in allen Reitern, das vorbelegte Steuerjahr, die Fondstypwahl bei Positionen ohne Assetklasse (Name, Beschreibung, `aria-invalid`), die Eingabe angesetzter Vorabpauschalen beim Verkauf (ohne gewählten Fondstyp den Hinweis mit „Zum Fondstyp“), den Wechsel des Steuerjahres mit Kursen je Jahr, den PDF- und CSV-Download (CSV mit BOM, CRLF und 16 Spalten je Zeile), die Fehlermeldung bei unbekanntem Format, die Ablehnung von PDF- und Excel-Dateien, Startseite, Navigation, Rechtsseiten, 404-Seite, Metadaten, `robots.txt` und Sitemap, die mobile Darstellung, axe-core bei 390, 768 und 1280 px und dass während der Auswertung keine Anfrage mit Dateiinhalten die Seite verlässt.
 
@@ -136,6 +142,7 @@ packages/legal/                       Disclaimer, Datenschutztexte
 packages/charts/                      Diagramm-Komponenten (Recharts)
 packages/pdf/                         Report-Vorlage für den PDF-Export (@react-pdf/renderer)
 docs/verifikation.md                  Prüfstand der Steuerlogik, offene Punkte, Abweichungen
+docs/pruefung-echte-exporte.md        Anleitung für die Prüfung an echten Broker-Exporten
 CLAUDE.md                             Arbeitsanweisungen für die KI-gestützte Entwicklung mit Claude Code
 ```
 
@@ -146,7 +153,7 @@ CLAUDE.md                             Arbeitsanweisungen für die KI-gestützte 
 - Steuerergebnisse sind Schätzungen. Maßgeblich ist die Abrechnung der depotführenden Bank, die zusätzlich Freistellungsaufträge, Verlusttöpfe und Kirchensteuer berücksichtigt.
 - Ändert ein Broker sein Exportformat, bricht der Parser mit einer Fehlermeldung ab, statt falsche Zahlen zu liefern.
 - Nur CSV-Dateien werden gelesen, als UTF-8, Windows-1252 oder UTF-16 mit BOM. PDF-Kontoauszüge, Excel- und ZIP-Dateien werden an der Dateisignatur erkannt und mit einem Hinweis auf den richtigen Export abgelehnt.
-- Geprüft sind die Parser an synthetischen Testdateien, die den öffentlich beschriebenen Formaten nachgebaut sind; ein Abgleich mit echten Exporten steht aus ([docs/verifikation.md](docs/verifikation.md)).
+- Geprüft sind die Parser an synthetischen Testdateien, die den öffentlich beschriebenen Formaten nachgebaut sind; ein Abgleich mit echten Exporten steht aus ([docs/verifikation.md](docs/verifikation.md), Anleitung in [docs/pruefung-echte-exporte.md](docs/pruefung-echte-exporte.md)).
 
 ## Roadmap
 
@@ -176,4 +183,4 @@ DepotDoktor liefert allgemeine Informationen und stellt keine Anlage- oder Steue
 
 ## Lizenz
 
-MIT, siehe [LICENSE](./LICENSE).
+MIT, siehe [LICENSE](./LICENSE). Ausgenommen ist die Schriftdatei für das Vorschaubild, `apps/web/assets/noto-sans-v27-latin-regular.ttf` (Noto Sans, Copyright 2015-2021 Google LLC): Sie steht unter der SIL Open Font License 1.1, siehe [apps/web/assets/OFL.txt](apps/web/assets/OFL.txt).

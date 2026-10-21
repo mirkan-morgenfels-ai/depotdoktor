@@ -1,6 +1,6 @@
 # Verifikation und offene Punkte (K1 DepotDoktor)
 
-Stand: 08.10.2026 (restliche Entscheidungen und Abgleich mit den Rechenbeispielen des BMF, siehe den letzten Abschnitt „Restliche Entscheidungen 08.10.2026“; davor CSV-Export für deutsches Excel; zur Steuerlogik die Abschnitte „Nachkontrolle 07.10.2026“ und „Nachbesserung 07.10.2026“). Quellen zur Steuerlogik gehören hierher, nicht in den Code.
+Stand: 20.10.2026 (Anleitung für die Prüfung an echten Exporten in [pruefung-echte-exporte.md](pruefung-echte-exporte.md), ohne Änderung an Code und Rechenwegen, siehe den letzten Abschnitt; davor die Framework-Migration auf Next.js 16, ESLint 10 und Vitest 5 ohne fachliche Änderung, Abschnitt „Framework-Migration 17.10.2026“; fachlich zuletzt die restlichen Entscheidungen und der Abgleich mit den Rechenbeispielen des BMF im Abschnitt „Restliche Entscheidungen 08.10.2026“; davor CSV-Export für deutsches Excel; zur Steuerlogik die Abschnitte „Nachkontrolle 07.10.2026“ und „Nachbesserung 07.10.2026“). Quellen zur Steuerlogik gehören hierher, nicht in den Code.
 
 ## Prüfstand der Steuerlogik
 
@@ -30,12 +30,15 @@ Rechtsgrundlagen: § 18 InvStG (Vorabpauschale), § 2 Abs. 11 InvStG (Ausschütt
 
 ## Zu verifizieren an echten Exporten
 
-1. **Trade-Republic-Kopfzeile.** In der ursprünglichen Spezifikation (nicht veröffentlicht) ist die 23-spaltige Kopfzeile nach `"tax"` abgeschnitten. Die Fixture `packages/csv/fixtures/traderepublic-synthetic.csv` verwendet eine angenommene Fortsetzung (`original_amount`, `fx_rate`, `currency`, `mcc_code`, `card_number`, `card_id`, `holder_name`, `seller_name`, `seller_city`, `isin`). Der Parser erkennt das Format an den zwölf Pflichtspalten `datetime, date, account_type, category, type, asset_class, name, shares, price, amount, fee, tax` und liest die übrigen Spalten nur, wenn sie vorhanden sind. Ob die ISIN im Export enthalten ist und wie die Spalte heißt, muss an einem echten Export geprüft werden. Offen.
+Anleitung, Prüfliste und Prüfprotokoll für den Autor: [pruefung-echte-exporte.md](pruefung-echte-exporte.md). Ergebnisse kommen hier nur anonymisiert hinein.
+
+1. **Trade-Republic-Kopfzeile.** In der ursprünglichen Spezifikation (nicht veröffentlicht) ist die 23-spaltige Kopfzeile nach `"tax"` abgeschnitten. Die Fixture `packages/csv/fixtures/traderepublic-synthetic.csv` verwendet eine angenommene Fortsetzung (`original_amount`, `fx_rate`, `currency`, `mcc_code`, `card_number`, `card_id`, `holder_name`, `seller_name`, `seller_city`, `isin`). Der Parser erkennt das Format an den zwölf Pflichtspalten `datetime, date, account_type, category, type, asset_class, name, shares, price, amount, fee, tax` und liest die übrigen Spalten nur, wenn sie vorhanden sind. Ob die ISIN im Export enthalten ist und wie die Spalte heißt, muss an einem echten Export geprüft werden. Stand der Recherche 20.10.2026: Eine im Forum von Portfolio Performance veröffentlichte Beispielzeile (Beitrag vom 19.04.2026) hat 23 Felder. Die ersten 13 passen nach ihrem Inhalt zu `datetime` bis `tax` einschließlich `symbol`; danach folgen die Währung, drei leere Felder, eine Beschreibung, eine UUID und vier leere Felder. Im selben Thread genannt sind die Spalten `original_amount`, `original_currency` und `fx_rate`. Die Fortsetzung in der Fixture weicht davon vermutlich ab; für die Erkennung zählen nur die zwölf Pflichtspalten. Die Kopfzeile ist nicht veröffentlicht. Offen.
 2. **Trade-Republic-Werte in `category` und `type`.** Die Zuordnung (Kauf, Verkauf, Dividende, Zinsen, Einzahlung, Kartenzahlung, Gebühr, Steuer) arbeitet mit Schlüsselwörtern (`BUY`, `SELL`, `DIVIDEND`, `INTEREST`, `PAYIN`, `PAYOUT`, `CARD`, `FEE`, `TAX`, `SAVINGS_PLAN`, `SAVEBACK`, `ROUNDUP`). Unbekannte Werte landen als „Sonstiges“ mit Hinweis. Liste der echten Werte an einem Export sammeln. Offen.
 3. **Vorzeichen des Betrags bei Trade Republic.** Der Parser normalisiert das Vorzeichen anhand der Buchungsart (Kauf negativ, Verkauf positiv), ist also gegen beide Konventionen robust. Trotzdem an einem Export prüfen, ob `amount` bei Käufen negativ ist. Offen.
-4. **Scalable-Capital-Werte in `type` und `assetType`.** Bekannt aus dem PP-Forum: `Buy`, `Security`. Angenommen: `Sell`, `Distribution`, `Deposit`, `Withdrawal`, `Interest`, `Fee`, `Cash`. Zeilen mit `status` ungleich `Executed` werden übersprungen. Offen.
+4. **Scalable-Capital-Werte in `type` und `assetType`.** Bekannt aus dem PP-Forum: `Buy`, `Security`. Angenommen: `Sell`, `Distribution`, `Deposit`, `Withdrawal`, `Interest`, `Fee`, `Cash`. Zeilen mit `status` ungleich `Executed` werden übersprungen. Stand der Recherche 20.10.2026: Laut Scalable-FAQ zum Transaktionsexport filtert die Transaktionsansicht nach den Auftragstypen Kauf, Verkauf, Sparplan, Einzahlung, Auszahlung, Ausschüttung, Depotübertrag, Gebühren (ohne Ordergebühren), Kapitalmaßnahme, Steuern und Zinsen und nach den Status Ausstehend, Ausgeführt, Storniert, Abgelaufen und Abgelehnt; wie diese Werte in der CSV heißen, ist nicht beschrieben. Für Depotübertrag und Kapitalmaßnahme hat der Parser keine eigene Regel; solche Zeilen landen voraussichtlich als „Sonstiges“ mit Hinweis. Offen.
 5. **Assetklasse bei Scalable Capital.** `assetType = Security` unterscheidet nicht zwischen Aktie und ETF; solche Positionen erscheinen als „Nicht zugeordnet“ mit dem Hinweis „Der Export enthält keine Assetklasse“. Den Fondstyp wählt der Nutzer im Steuerreiter; seit 07.10.2026 steht dort bei Scalable-Positionen ohne Assetklasse der Hinweis „Der Scalable-Export unterscheidet nicht zwischen Aktie und Fonds. Bitte prüfen Sie den Fondstyp.“ ~~Der Standard-Fondstyp bleibt Aktienfonds (Entscheidung des Autors offen).~~ Seit 08.10.2026 ist für Positionen ohne Assetklasse kein Fondstyp vorbelegt („Bitte wählen“), Abschnitt „Restliche Entscheidungen 08.10.2026“, Punkt 2.
 6. **Betrag netto oder brutto bei Ausschüttung und Verkauf.** Am echten TR- und Scalable-Export prüfen, ob `amount` netto ist, also nach Gebühr und Steuerabzug. DepotDoktor behandelt `amount` bei Ausschüttungen und seit der Nachbesserung 07.10.2026 auch bei Verkäufen als Nettobetrag: Für die Vorabpauschale zählt `|amount| + |tax|` als Bruttoausschüttung (§ 2 Abs. 11 InvStG), für den Veräußerungsgewinn `|amount| + |tax|` als Erlös nach Gebühr (§ 20 Abs. 4 EStG: Die abgeführte Steuer ist keine Veräußerungskost). Wäre `amount` schon brutto, würde der Steuerabzug doppelt gezählt; die Vorabpauschale wäre zu niedrig, der Gewinn zu hoch geschätzt. Ebenfalls offen: welches Vorzeichen eine Steuererstattung in der Spalte `tax` hat. Der Parser entfernt das Vorzeichen; eine Erstattung (etwa bei einem Verlustverkauf nach versteuerten Gewinnen) würde deshalb wie ein Steuerabzug addiert statt abgezogen. Offen.
+7. **Stornos, Korrekturen und Steuerbuchungen bei Trade Republic.** Stand der Recherche 20.10.2026 (Forum von Portfolio Performance, Quellen in [pruefung-echte-exporte.md](pruefung-echte-exporte.md)): Der Transaktionsexport enthält Stornobuchungen (dort „Trading/BUY_Cancelled“ genannt), korrigierte Dividenden („Cash dividend“ und „Cash dividend corrected“) und Steuerkorrekturen (`CASH`/`TAX_OPTIMIZATION`), bei denen der Betrag in `tax` steht und `amount` 0 ist. DepotDoktor kennt keine Stornos: Eine Buchungsart mit `BUY` gilt als Kauf, sobald Stück und Kurs gefüllt sind; eine Stornierung einer Dividende mit negativem Betrag würde als weitere Dividende gezählt, weil der Parser bei Ausschüttungen das Vorzeichen entfernt; bei Steuerbuchungen liest DepotDoktor nur `amount`, eine solche Zeile ginge also mit 0 in „Abgeführte Steuern“ ein. Wie die Buchungsarten im echten Export heißen und ob die Fälle auftreten, zeigt erst der Export (Prüfliste 3.1). Offen.
 
 ## Rechtstexte (Schritt 6), zu verifizieren
 
@@ -709,3 +712,94 @@ Lokal unter Windows 11 mit Node 22.23.2, pnpm 10.34.5 und Chromium Headless Shel
 | `pnpm audit --prod` / `pnpm audit` | keine Meldung / nur braces über eslint-config-next (unverändert) |
 
 Die Tabelle gibt den Stand nach der Nachbesserung wieder (Endkontrolle am 08.10.2026). Abhängigkeiten sind unverändert.
+
+## Framework-Migration 17.10.2026
+
+Umstellung auf die Major-Versionen, die Dependabot für NetzRadar (PR #13 in `mirkan-morgenfels-ai/netzradar`) vorgeschlagen hat. Rechenwege, Kennzahlen, Parser, Steuerlogik, Rechtstexte und Oberflächentexte sind unverändert; `apps/web/lib`, `apps/web/components`, `apps/web/e2e` und `packages/*/src` haben keine Änderung.
+
+| Paket | vorher | nachher |
+|---|---|---|
+| `next`, `eslint-config-next` | 15.5.27 | 16.4.2 (Bereich `^16.4.0`) |
+| `eslint` | 9.39.5 | 10.13.0 (Bereich `^10.12.0`) |
+| `@eslint/js` | 9.39.5 | 10.0.1 |
+| `vitest` | 4.1.11 | 5.0.5 (Bereich `^5.0.4`), `vite` 8.2.2 als Peer |
+| `@types/node` | 22.20.1 | 26.6.5 |
+| `typescript` | 5.9.3 | 5.9.3, TypeScript 7 ausgelassen (siehe unten) |
+| `@eslint/eslintrc` | 3.3.7 | entfernt (kein `FlatCompat` mehr) |
+
+Weitere Pakete sind nicht angehoben; im Lockfile ändern sich nur die Abhängigkeiten dieser Pakete. `engines.node` ist jetzt `^22.13.0 || ^24.0.0 || >=26.0.0`, die Schnittmenge aus ESLint 10 (`^20.19.0 || ^22.13.0 || >=24`) und Vitest 5 (`^22.12.0 || ^24.0.0 || >=26.0.0`); die CI bleibt auf Node 22.
+
+### Umgestellt
+
+- Lint: `apps/web/eslint.config.mjs` nutzt die nativen Flat-Configs `eslint-config-next/core-web-vitals` und `eslint-config-next/typescript` mit `defineConfig` und `globalIgnores` aus `eslint/config`, die fünf Pakete `defineConfig` statt des veralteten `tseslint.config`. Vergleich der wirksamen Regeln (`eslint --print-config`) vorher und nachher: keine Regel entfallen, keine Stufe geändert. Neu aktiv sind in `apps/web` 15 Regeln (die React-Compiler-Regeln von `eslint-plugin-react-hooks` 7 wie `react-hooks/purity`, `react-hooks/refs` und `react-hooks/set-state-in-effect` sowie `@next/next/no-location-assign-relative-destination`), in den Paketen die drei neuen Empfehlungen von ESLint 10 (`no-unassigned-vars`, `no-useless-assignment`, `preserve-caught-error`). Der Code erfüllt sie ohne Änderung.
+- `apps/web/tsconfig.json` ohne `baseUrl` (TypeScript 7 kennt die Option nicht mehr, `paths` gilt relativ zur Datei).
+- `next.config.ts` setzt `agentRules: false` (Option seit Next.js 16.3), damit `next dev` keine `AGENTS.md` anlegt.
+- Vorschaubild: Next.js 16 bringt in `next/og` Geist statt Noto Sans als eingebaute Schrift mit (`dist/compiled/@vercel/og/Geist-Regular.ttf` statt `noto-sans-v27-latin-regular.ttf`). Ohne Anpassung wären Kicker, Namenszeile und Beschreibung im Vorschaubild in Geist gesetzt. `app/opengraph-image.tsx` lädt deshalb die bisherige Schriftdatei beim Build aus `apps/web/assets/` (Datei byte-gleich mit der aus `next` 15.5.27; SIL Open Font License 1.1 in `apps/web/assets/OFL.txt`, Wortlaut gegen eine zweite OFL-Kopie aus den installierten Paketen geprüft); `.gitattributes` behandelt `*.ttf` als binär.
+
+### Geprüft, ohne Änderung nötig
+
+- Next.js 16 (Leitfaden `node_modules/next/dist/docs/01-app/02-guides/upgrading/version-16.md`): keine eigene webpack-Konfiguration, Turbopack baut ohne Anpassung; keine Middleware, also kein Umzug auf `proxy`; kein `next/image`; keine dynamischen Routen, kein `params`, `searchParams`, `cookies()` oder `headers()`; Vorschaubild und Icons ohne Parameter; kein `scroll-behavior: smooth`; kein AMP, `runtimeConfig`, `devIndicators`, `revalidateTag` oder PPR. `next lint` war schon vorher durch `eslint .` ersetzt. Alle Seiten bleiben statisch (11 Routen, alle „Static“).
+- Vitest 5: kein `vi.mock`, keine Fake-Timer, kein `sequential`, kein `toThrow("")`; die Konfigurationen in `apps/web`, `packages/csv` und `packages/pdf` brauchen keine Änderung, es entsteht kein `.vitest`-Ordner.
+- PDF-Export mit `@react-pdf/renderer` 4.9 unter Turbopack: `next start` und `next dev` erzeugen für die Beispieldatei dieselbe PDF-Datei (19.253 Byte, byte-gleich mit dem Stand vor der Migration), ohne CSP-Verletzung und ohne Konsolenfehler. Die CSP braucht weiterhin `'wasm-unsafe-eval'` und `worker-src 'self' blob:`, sonst nichts Neues.
+
+### TypeScript 7 ausgelassen
+
+Probe am 17.10.2026 mit `typescript` 7.0.2 in allen sechs Paketen: `pnpm typecheck`, `pnpm test` und `pnpm build` grün, `pnpm lint` bricht in jedem Paket ab mit „typescript-eslint does not support TS 7.0.“ (`Error` aus `typescript-eslint` 8.69.0, `dist/index.js:52`, eine feste Prüfung der TypeScript-Hauptversion).
+
+typescript-eslint 8 braucht die Programmier-API von TypeScript, die TypeScript 7.0 nicht hat; auch die neueste Version 8.71.2 verlangt `typescript >=4.8.4 <6.1.0`. `eslint-config-next/typescript` hängt an typescript-eslint. Belege: https://github.com/typescript-eslint/typescript-eslint/issues/12518 (am 08.07.2026 als „not planned“ geschlossen, „there is no TS 7 API at this time“) und https://github.com/typescript-eslint/typescript-eslint/issues/10940 (offen, Unterstützung mit der neuen API ab TypeScript 7.1). Der im TypeScript-7-Blog beschriebene Parallelbetrieb (`typescript` als Alias auf `@typescript/typescript6`, TypeScript 7 unter einem zweiten Namen) ist verworfen, weil das Paket `typescript` dann trotzdem 6.0 wäre und Lint und die Typprüfung in `next build` weiter mit TypeScript 6 liefen. TypeScript bleibt auf 5.9, `.github/dependabot.yml` ignoriert `typescript` 7.x. Gegenprobe für den nächsten Dependabot-PR: Mit `typescript` 6.0.3 sind `pnpm typecheck` (ohne `.next` wie in der CI und nach dem Build), `pnpm lint`, `pnpm test` und `pnpm build` grün.
+
+### Vorher-nachher-Vergleich
+
+Stand vor der Migration: `main` (Commit 460e5ed) in ein eigenes Verzeichnis exportiert, mit `pnpm install --frozen-lockfile --offline` installiert und mit Next.js 15.5.27 gebaut. Beide Stände liefen nacheinander mit `next start` auf Port 3801; Playwright mit Chromium Headless Shell 1234, Uhr auf den 08.10.2026, `reducedMotion: "reduce"`, ganze Seite.
+
+| Prüfung | Ergebnis |
+|---|---|
+| Startseite und Projektseite bei 1280 und 390 px | PNG byte-gleich, also pixelgleich |
+| Report mit Beispieldatei und Steuerreiter bei 1280 und 390 px | PNG byte-gleich |
+| PDF-Report und CSV-Export der Beispieldatei | byte-gleich (19.253 und 1.204 Byte) |
+| Sicherheits-Header (CSP, HSTS, `X-Frame-Options`, `nosniff`, Referrer-Policy, Permissions-Policy, COOP) auf allen Seiten, 404, Icons, `robots.txt` und Sitemap | gleich |
+| `icon.svg`, `robots.txt`, `sitemap.xml` | byte-gleich |
+| Vorschaubild (1200 × 630) | sichtbar gleich; 623 von 756.000 Pixeln weichen um mehr als 24 von 255 ab (höchstens 51), nur an Glyphen- und Linienkanten, dazu Rundungsunterschiede im Farbverlauf (neuere Satori- und Resvg-Version in `next/og`) |
+| Apple-Icon (180 × 180) | sichtbar gleich; höchste Abweichung 20 von 255, nur an Kanten |
+| Anfragen beim Laden, nach Beispieldatei und Export | vorher wie nachher nur GET an denselben Server (Seiten, `/_next/static/`, Vorabruf mit `_rsc`), keine externe Anfrage, keine Konsolenmeldung |
+
+Sichtbare Unterschiede gibt es keine; die README-Screenshots sind deshalb nicht neu aufgenommen. Einziger Unterschied in den Antworten: Next.js 16 liefert Vorschaubild, Apple-Icon und `icon.svg` mit `Cache-Control: public, max-age=0, must-revalidate` statt `public, immutable, no-transform, max-age=31536000` (Vorgabe in `next/dist/server/og/image-response.js` und im Metadaten-Loader von Next.js 16). Das betrifft nur das Zwischenspeichern dieser drei Dateien und ist bewusst übernommen.
+
+### Prüfergebnisse
+
+Lokal unter Windows 11 mit Node 22.23.2, pnpm 10.34.5 und Chromium Headless Shell 1234; vorher `apps/web/.next` und `next-env.d.ts` gelöscht wie in der CI, E2E mit `CI=true` gegen `next start` auf Port 3801.
+
+| Schritt | Ergebnis |
+|---|---|
+| `pnpm install --frozen-lockfile` | grün, Lockfile aktuell. Beim Auflösen (`pnpm install` ohne `--frozen-lockfile`) meldet pnpm Peer-Warnungen nur für `eslint-plugin-import`, `eslint-plugin-jsx-a11y` und `eslint-plugin-react` (Peer bis ESLint 9; `eslint-config-next` 16.4 passt die Regeln von React- und Import-Plugin an ESLint 10 an) |
+| `pnpm typecheck` (einschließlich E2E-Dateien) | grün |
+| `pnpm lint` (alle sechs Pakete) | grün |
+| `pnpm test` | 279 Tests grün (csv 50, pdf 2, web 227), wie vor der Migration |
+| `pnpm build` | grün, Next.js 16.4.2 mit Turbopack, 11 Routen statisch |
+| `pnpm test:e2e` mit `CI=true` | 29 Tests grün im ersten Durchlauf, ohne Wiederholung (`depotdoktor.spec.ts` 15, `site.spec.ts` 14), darin axe-core bei 390, 768 und 1280 px ohne Verstöße und kein waagrechter Überlauf bei 320 px |
+| `pnpm audit --prod` / `pnpm audit` | keine Meldung / nur braces über eslint-config-next (unverändert) |
+
+## Anleitung für die Prüfung an echten Exporten 20.10.2026
+
+Der Abgleich mit echten Exporten braucht die Daten des Autors. Neu ist deshalb [pruefung-echte-exporte.md](pruefung-echte-exporte.md): Exportwege bei Trade Republic und Scalable Capital (recherchiert am 20.10.2026, mit Quellen; ohne Hilfeseite des Brokers als „Stand der Recherche“ gekennzeichnet), Laden der Datei in DepotDoktor, eine Prüfliste (Buchungen und übersprungene Zeilen, Stichprobe je Buchungsart, Zeitraum, TTWROR und IRR gegen die Performance-Anzeige des Brokers, FIFO gegen die Abrechnungen, Vorabpauschale gegen die Buchung im Januar, Teilfreistellung je Fondstyp, Allokation), ein Prüfprotokoll zum Ausfüllen und das Vorgehen bei Abweichungen (anonymisierte Fixture, Test zuerst, Issue-Vorlage). README („Status“, „Unterstützte Exporte“, „Grenzen“, „Projektstruktur“) und `CLAUDE.md` („Offene Punkte des Autors“) verweisen darauf. Code, Kennzahlen, Rechenwege, Oberflächen- und Rechtstexte sind unverändert.
+
+Ergebnisse der Recherche stehen oben unter „Zu verifizieren an echten Exporten“, Punkte 1, 4 und 7. Außerdem:
+
+1. **Scalable Capital nur mit PRIME+.** Den CSV-Export gibt es laut Scalable-FAQ (Inhalt aktualisiert am 29.07.2026) nur im PRIME+ Broker. Das Upload-Feld nennt nur den Weg „Broker → Transaktionen → CSV“; ob der Hinweis auf PRIME+ auch in die Oberfläche gehört, entscheidet der Autor. Empfehlung: ja, kurz als „nur PRIME+“ am Exportweg, damit Nutzer des FREE Brokers nicht vergeblich suchen. Offen.
+2. **Performance-Anzeigen der Broker.** Trade Republic teilt den absoluten Ertrag im Zeitraum durch die durchschnittliche Portfoliogröße, Scalable Capital zeigt die unrealisierte Rendite des aktuellen Bestands. Beides ist weder TTWROR noch IRR; Abweichungen zu DepotDoktor sind erwartet und in der Prüfliste (3.4) erklärt. Prüfbar ist die Rechnung von DepotDoktor selbst: IRR mit `XINTZINSFUSS` aus der Tabelle „Wertverlauf“, TTWROR aus den Periodenrenditen.
+3. **Jahreszuordnung der Vorabpauschale.** Die Vorabpauschale für 2025 gilt am ersten Werktag 2026 als zugeflossen (§ 18 Abs. 3 InvStG) und steht deshalb in der Jahressteuerbescheinigung für 2026. Heute prüfbar ist nur Steuerjahr 2025 gegen das Dokument der Bank vom Januar 2026.
+4. **Fondstyp bei Derivaten.** Beim Schreiben der Prüfliste aufgefallen: Positionen mit der Trade-Republic-Assetklasse `DERIVATIVE` oder `WARRANT` sind wie alle Assetklassen außer Aktie, Anleihe, Krypto und unbekannt als Aktienfonds vorbelegt (`defaultFundType` in `tax/summary.ts`), obwohl Derivate keine Investmentfonds sind. Die Prüfliste (3.7) weist darauf hin. Vorschlag: wie Aktien als „Kein Fonds (Aktie, Anleihe)“ vorbelegen, mit Test vorher; Entscheidung des Autors. Offen.
+
+### Prüfergebnisse
+
+Lokal unter Windows 11 mit Node 22.23.2, pnpm 10.34.5 und Chromium Headless Shell 1234; vorher `apps/web/.next` und `next-env.d.ts` gelöscht wie in der CI, E2E mit `CI=true` gegen `next start` auf Port 3801.
+
+| Schritt | Ergebnis |
+|---|---|
+| `pnpm install --frozen-lockfile` | grün, Lockfile aktuell |
+| `pnpm typecheck` (einschließlich E2E-Dateien) | grün |
+| `pnpm lint` (alle sechs Pakete) | grün |
+| `pnpm test` | 279 Tests grün (csv 50, pdf 2, web 227), unverändert |
+| `pnpm build` | grün, Next.js 16.4.2 mit Turbopack, 11 Routen statisch |
+| `pnpm test:e2e` mit `CI=true` | 29 Tests grün im ersten Durchlauf, ohne Wiederholung (`depotdoktor.spec.ts` 15, `site.spec.ts` 14) |
+| `pnpm audit --prod` / `pnpm audit` | keine Meldung / nur braces über eslint-config-next (unverändert) |
