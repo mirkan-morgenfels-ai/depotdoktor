@@ -95,7 +95,7 @@ Die CSV-Datei wird ausschließlich im Browser gelesen und verarbeitet. Inhalte I
 
 ## Tech-Stack
 
-Next.js 16 (App Router, Turbopack), TypeScript 5.9 (strict), Tailwind CSS 4, Papa Parse, Recharts, @react-pdf/renderer, decimal.js für Geldbeträge, ESLint 10, Vitest 5, Playwright, pnpm Workspaces, GitHub Actions, Vercel. TypeScript 7 ist noch nicht im Einsatz, weil typescript-eslint es nicht unterstützt (Einzelheiten in [docs/verifikation.md](docs/verifikation.md), Abschnitt „Framework-Migration 17.10.2026“).
+Next.js 16 (App Router, Turbopack), TypeScript 6.0 (strict), Tailwind CSS 4, Papa Parse, Recharts, @react-pdf/renderer, decimal.js für Geldbeträge, ESLint 10, Vitest 5, Playwright, pnpm Workspaces, GitHub Actions, Vercel. TypeScript 7 ist noch nicht im Einsatz, weil typescript-eslint es nicht unterstützt (Einzelheiten in [docs/verifikation.md](docs/verifikation.md), Abschnitt „Framework-Migration 17.10.2026“).
 
 ## Lokale Ausführung
 
