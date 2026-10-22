@@ -54,10 +54,10 @@ function priceText(row: TaxRow, field: "yearStartPrice" | "yearEndPrice"): strin
 }
 
 function hintText(row: TaxRow, year: number): string {
-  if (row.estimate?.fundType === "none") return "Keine Vorabpauschale: kein Fonds (z. B. Einzelaktie oder Anleihe).";
+  if (row.estimate?.fundType === "none") return "Keine Vorabpauschale: kein Fonds (z. B. Einzelaktie, Anleihe oder Derivat).";
   if (!row.heldAtYearEnd) return noHoldingText(year);
   if (row.status === "fundTypeMissing") {
-    return "Keine Schätzung: Fondstyp nicht gewählt. Der Export nennt keine Assetklasse; bitte im Steuerreiter den Fondstyp wählen.";
+    return "Keine Schätzung: Fondstyp nicht gewählt. Der Export nennt keine Assetklasse, aus der sich der Fondstyp ergibt; bitte im Steuerreiter den Fondstyp wählen.";
   }
   return row.sameSourcePrefill
     ? `Keine Schätzung: Der Export enthält für ${year} keinen eigenen Kurs; bitte Kurse am 01.01. und 31.12. eintragen.`

@@ -5,8 +5,8 @@ import { Button, cx } from "@portfolio/ui";
 import { UploadGlyph } from "@/components/site/motif";
 
 const BROKER_STEPS = [
-  { broker: "Trade Republic", path: "App → Kontoauszüge → Transaktionsexport" },
-  { broker: "Scalable Capital", path: "Broker → Transaktionen → CSV" },
+  { broker: "Trade Republic", path: "App → Kontoauszüge → Transaktionsexport", note: null },
+  { broker: "Scalable Capital", path: "Broker → Transaktionen → CSV", note: "CSV-Export nur im PRIME+ Broker" },
 ] as const;
 
 export function FileDrop({ onFile, invalid = false }: { onFile: (file: File) => void; invalid?: boolean }) {
@@ -45,11 +45,19 @@ export function FileDrop({ onFile, invalid = false }: { onFile: (file: File) => 
         <Button className="mt-6" onClick={() => inputRef.current?.click()}>
           Datei auswählen
         </Button>
-        <dl className="mt-9 grid w-full max-w-xl gap-3 border-t border-line pt-6 text-left text-[13px] sm:grid-cols-2 sm:gap-6">
+        <dl
+          className="mt-9 grid w-full max-w-xl gap-3 border-t border-line pt-6 text-left text-[13px] sm:grid-cols-2 sm:gap-6"
+          data-testid="broker-steps"
+        >
           {BROKER_STEPS.map((step) => (
             <div key={step.broker}>
               <dt className="text-[0.6875rem] font-medium tracking-[0.14em] text-gold-deep uppercase">{step.broker}</dt>
               <dd className={cx("mt-1 leading-snug", active ? "text-ink" : "text-slate")}>{step.path}</dd>
+              {step.note ? (
+                <dd className="mt-1 text-xs leading-snug text-gold-deep" data-testid="broker-step-note">
+                  {step.note}
+                </dd>
+              ) : null}
             </div>
           ))}
         </dl>

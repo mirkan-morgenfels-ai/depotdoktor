@@ -1,6 +1,6 @@
 # Prüfung an echten Broker-Exporten
 
-Anleitung für den Autor, Stand der Recherche 20.10.2026. Offen ist laut [verifikation.md](verifikation.md) noch der Abgleich von DepotDoktor mit echten Exporten von Trade Republic und Scalable Capital. Bisher sind Parser, Kennzahlen und Steuerlogik nur an synthetischen Testdateien (`packages/csv/fixtures/`), an Handrechnungen und an den Rechenbeispielen des BMF geprüft. Diese Anleitung beschreibt, wie Sie
+Anleitung für den Autor, Stand der Recherche 20.10.2026, ergänzt am 22.10.2026 (Fondstyp bei Derivaten und Cash, Hinweis „nur PRIME+“ im Upload-Feld, Hinweise aus den Testdateien von Portfolio Performance). Offen ist laut [verifikation.md](verifikation.md) noch der Abgleich von DepotDoktor mit echten Exporten von Trade Republic und Scalable Capital. Bisher sind Parser, Kennzahlen und Steuerlogik nur an synthetischen Testdateien (`packages/csv/fixtures/`), an Handrechnungen und an den Rechenbeispielen des BMF geprüft. Diese Anleitung beschreibt, wie Sie
 
 1. den Export bei Trade Republic und Scalable Capital erzeugen,
 2. die Datei in DepotDoktor laden,
@@ -34,7 +34,7 @@ Trade Republic bietet den Transaktionsexport als CSV seit Mitte April 2026 an (A
 
 Ob die Web-Version von Trade Republic den Export ebenfalls anbietet, ist nicht belegt.
 
-Was DepotDoktor erwartet: Komma als Trennzeichen, alle Felder in Anführungszeichen, Dezimalpunkt, ISO-Datum, UTF-8 und die zwölf Pflichtspalten `datetime`, `date`, `account_type`, `category`, `type`, `asset_class`, `name`, `shares`, `price`, `amount`, `fee`, `tax`. Eine im Forum veröffentlichte Beispielzeile (Beitrag vom 19.04.2026) hat 23 Felder; die ersten 13 passen nach ihrem Inhalt zu `datetime` bis `tax` einschließlich `symbol`. Die Kopfzeile selbst ist dort nicht veröffentlicht. Ob es eine Spalte `isin` gibt und wie die Spalten nach `tax` heißen, klärt erst Ihr Export (`docs/verifikation.md`, „Zu verifizieren an echten Exporten“, Punkt 1).
+Was DepotDoktor erwartet: Komma als Trennzeichen, alle Felder in Anführungszeichen, Dezimalpunkt, ISO-Datum, UTF-8 und die zwölf Pflichtspalten `datetime`, `date`, `account_type`, `category`, `type`, `asset_class`, `name`, `shares`, `price`, `amount`, `fee`, `tax`. Eine im Forum veröffentlichte Beispielzeile (Beitrag vom 19.04.2026) hat 23 Felder; die ersten 13 passen nach ihrem Inhalt zu `datetime` bis `tax` einschließlich `symbol`. Die Kopfzeile selbst ist dort nicht veröffentlicht. Ob es eine Spalte `isin` gibt und wie die Spalten nach `tax` heißen, klärt erst Ihr Export (`docs/verifikation.md`, „Zu verifizieren an echten Exporten“, Punkt 1). Ein Hinweis vorab (Stand 22.10.2026): Die Testdateien von Portfolio Performance, die laut deren Entwickler von Trade Republic stammen, haben keine Spalte `isin`, die ISIN steht in `symbol`; eine Datei ist mit Semikolon getrennt, und `amount` enthält dort weder Gebühr noch Steuer (`docs/verifikation.md`, Abschnitt „Fondstyp bei Derivaten und Cash, Hinweis PRIME+ 22.10.2026“, Nebenbefunde). Achten Sie darauf in 3.1 und 3.2 besonders.
 
 Weitere Unterlagen von Trade Republic:
 
@@ -48,7 +48,7 @@ Weitere Unterlagen von Trade Republic:
 
 ### 1.2 Scalable Capital
 
-Laut Scalable-FAQ („Kann ich Informationen zu meinen Transaktionen exportieren, z.B. als CSV-Datei?“, Antwort für den Broker, zuletzt aktualisiert am 29.07.2026) gibt es den CSV-Export nur im PRIME+ Broker; im FREE Broker fehlt er. Die Produkt-News vom 12.12.2024 nannte noch PRIME und PRIME+.
+Laut Scalable-FAQ („Kann ich Informationen zu meinen Transaktionen exportieren, z.B. als CSV-Datei?“, Antwort für den Broker, zuletzt aktualisiert am 29.07.2026) gibt es den CSV-Export nur im PRIME+ Broker; im FREE Broker fehlt er. Die Produkt-News vom 12.12.2024 nannte noch PRIME und PRIME+. DepotDoktor nennt das seit 22.10.2026 auch im Upload-Feld („CSV-Export nur im PRIME+ Broker“).
 
 1. Im Broker „Transaktionen“ öffnen. Einsehbar sind die Transaktionen laut FAQ auf der Webseite und in der App; für den Export nennt die FAQ keine Plattform.
 2. Im Filter beim Datum „Benutzerdefiniertes Datum“ wählen, von der Depoteröffnung bis heute. Auftragstyp und Status nicht einschränken, damit auch nicht ausgeführte Aufträge im Export stehen, falls der Export sie enthält; DepotDoktor überspringt sie, und genau das wird in Abschnitt 3.1 geprüft. Ob der Export nicht ausgeführte Aufträge überhaupt enthält, ist nicht beschrieben.
@@ -139,7 +139,7 @@ Wählen Sie für jede Buchungsart aus 3.1 eine Zeile und vergleichen Sie die Ori
 Erwartung: Werte gleich, Käufe mit negativem, Verkäufe und Ausschüttungen mit positivem Betrag. Notieren Sie dabei vier offene Fragen, drei davon aus `docs/verifikation.md`, „Zu verifizieren an echten Exporten“:
 
 - Punkt 3: Ist `amount` bei Käufen im Original negativ?
-- Enthält `amount` beim Kauf die Gebühr (Stück × Kurs + Gebühr)? So sind die Testdateien aufgebaut, und so setzt DepotDoktor die Anschaffungskosten an.
+- Enthält `amount` beim Kauf die Gebühr (Stück × Kurs + Gebühr)? So sind die Testdateien aufgebaut, und so setzt DepotDoktor die Anschaffungskosten an. In den Testdateien von Portfolio Performance enthält `amount` die Gebühr nicht (siehe 1.1).
 - Punkt 6: Ist `amount` bei Verkäufen und Ausschüttungen der Betrag nach Gebühr und Steuerabzug (netto)? Vergleichen Sie mit der Abrechnung. DepotDoktor nimmt netto an; wäre er brutto, zählte DepotDoktor die Steuer doppelt.
 - Punkt 1: Hat jede Kauf- und Verkaufszeile eine ISIN? Fehlt sie, meldet DepotDoktor „Kauf ohne ISIN“ und führt die Position über den Namen; die Region in der Allokation fehlt dann.
 
@@ -205,7 +205,7 @@ Zulässige Abweichungen: andere Kurse als die der Bank, Kauf im Jahr 2025 (Zwöl
 
 ### 3.7 Teilfreistellung je Fondstyp
 
-Ist: das Auswahlfeld „Fondstyp“ je Position im Reiter „Steuer“. Bei Trade Republic ist er aus der Assetklasse des Exports vorbelegt: Aktie, Anleihe und Krypto als „Kein Fonds (Aktie, Anleihe)“, jede andere erkannte Assetklasse (ETF, Fonds, auch Derivate) als Aktienfonds; ohne erkannte Assetklasse steht „Bitte wählen“. Bei Scalable Capital steht immer „Bitte wählen“, weil der Export keine Assetklasse nennt.
+Ist: das Auswahlfeld „Fondstyp“ je Position im Reiter „Steuer“. Bei Trade Republic ist er aus der Assetklasse des Exports vorbelegt: Aktie, Anleihe, Krypto und Derivat als „Kein Fonds (Aktie, Anleihe, Derivat)“, ETF und Fonds als Aktienfonds; bei Cash und ohne erkannte Assetklasse steht „Bitte wählen“. Bei Scalable Capital steht immer „Bitte wählen“, weil der Export keine Assetklasse nennt.
 
 Soll: die Einstufung in den Fondsunterlagen und, sofern ausgewiesen, der Teilfreistellungssatz im Dokument der Bank zur Vorabpauschale oder in der Verkaufsabrechnung.
 
@@ -215,10 +215,10 @@ Soll: die Einstufung in den Fondsunterlagen und, sofern ausgewiesen, der Teilfre
 | Mischfonds | fortlaufend mindestens 25 % in Kapitalbeteiligungen (§ 2 Abs. 7 InvStG) | 15 % (§ 20 Abs. 2 InvStG) |
 | Immobilienfonds | fortlaufend mehr als 50 % in Immobilien und Immobilien-Gesellschaften (§ 2 Abs. 9 InvStG) | 60 % (§ 20 Abs. 3 InvStG) |
 | Auslands-Immobilienfonds | fortlaufend mehr als 50 % in ausländischen Immobilien und Auslands-Immobiliengesellschaften (§ 2 Abs. 9 Satz 2 InvStG) | 80 % (§ 20 Abs. 3 Satz 2 InvStG) |
-| Sonstiger Fonds, etwa Renten-ETF | keine der Quoten | keine |
-| Einzelaktie, Anleihe | kein Investmentfonds | „Kein Fonds (Aktie, Anleihe)“, keine Vorabpauschale |
+| Sonstiger Fonds, etwa Renten- oder Geldmarkt-ETF | keine der Quoten | keine |
+| Einzelaktie, Anleihe, Derivat (Zertifikat, Optionsschein, Hebelprodukt), Kontoguthaben | kein Investmentfonds (§ 1 Abs. 2 InvStG; für Zertifikate BMF-Schreiben vom 21.05.2019, Rz. 1.4) | „Kein Fonds (Aktie, Anleihe, Derivat)“, keine Vorabpauschale |
 
-Erwartung: Fondstyp wie in den Fondsunterlagen; „Steuerpflichtig“ = „Vorabpauschale“ × (1 − Teilfreistellungssatz). Achtung bei Trade Republic: Ein Renten- oder Geldmarkt-ETF ist als Aktienfonds vorbelegt und muss von Hand umgestellt werden. Ein Derivat ist ebenfalls als Aktienfonds vorbelegt, obwohl es kein Investmentfonds ist; richtig ist „Kein Fonds (Aktie, Anleihe)“.
+Erwartung: Fondstyp wie in den Fondsunterlagen; „Steuerpflichtig“ = „Vorabpauschale“ × (1 − Teilfreistellungssatz). Achtung bei Trade Republic: Ein Renten- oder Geldmarkt-ETF ist als Aktienfonds vorbelegt und muss von Hand umgestellt werden; Trade Republic führt ETFs als Assetklasse `FUND`. Derivate sind seit 22.10.2026 als „Kein Fonds (Aktie, Anleihe, Derivat)“ vorbelegt; prüfen Sie, ob die Abrechnung für sie keine Vorabpauschale ausweist.
 
 ### 3.8 Allokation
 
@@ -368,4 +368,5 @@ Gesetze und Erläuterungen:
 - § 2 Abs. 6, 7, 9 und 11, § 18 Abs. 1 bis 3, § 19 Abs. 1, § 20 Abs. 1 bis 3 InvStG: https://www.gesetze-im-internet.de/invstg_2018/
 - § 20 Abs. 4 Satz 1 und 7 EStG: https://www.gesetze-im-internet.de/estg/__20.html
 - BMF-Schreiben vom 21.05.2019 zu Anwendungsfragen des InvStG, Rz. 18.4 (Rundung), wie in [verifikation.md](verifikation.md)
+- Ergänzt am 22.10.2026 (abgerufen am 22.10.2026, Fundstellen in [verifikation.md](verifikation.md), Abschnitt „Fondstyp bei Derivaten und Cash, Hinweis PRIME+ 22.10.2026“): § 1 Abs. 2 InvStG, § 1 Abs. 1 KAGB, BMF-Schreiben vom 21.05.2019, Rz. 1.4 (Zertifikate kein Investmentvermögen), Testdateien und Importer von Portfolio Performance für den Trade-Republic-Transaktionsexport
 - Commerzbank, „Hinweise und Erläuterungen zur Jahressteuerbescheinigung 2025“ (Zeile „Höhe der Kapitalerträge“: Ausschüttungen, Vorabpauschalen und Veräußerungsgewinne aus Fonds nach Teilfreistellung; die Bank ist an das amtliche Muster gebunden): https://www.commerzbank.de/portal/media/a-30-sonstige-medien/pdf/themen/steuern/jahresendreporting/53964809_JStB_2025.pdf
