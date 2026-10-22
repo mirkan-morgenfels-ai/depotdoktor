@@ -137,7 +137,7 @@ function PriceInput({ row, year, field, label, describedBy, onInputChange }: Pri
 }
 
 function fundTypeMissingText(): string {
-  return `${FUND_TYPE_MISSING_LABEL}: Der Export nennt für diese Position keine Assetklasse. Bis Sie den Fondstyp wählen, wird nichts geschätzt, denn eine falsche Teilfreistellung verfälscht die Steuer. Für Aktien und Anleihen wählen Sie „Kein Fonds (Aktie, Anleihe)“.`;
+  return `${FUND_TYPE_MISSING_LABEL}: Der Export nennt für diese Position keine Assetklasse, aus der sich der Fondstyp ergibt. Bis Sie den Fondstyp wählen, wird nichts geschätzt, denn eine falsche Teilfreistellung verfälscht die Steuer. Für Aktien, Anleihen und Derivate wählen Sie „${FUND_TYPE_LABELS.none}“.`;
 }
 
 function missingText(row: TaxRow, year: number): string {
@@ -200,7 +200,7 @@ export function TaxTab({ summary, broker, runningYear, onYearChange, onInputChan
             i
           </span>
           <span className="max-w-[68ch]">
-            {totals.missingFundType ? "Wählen Sie unten für Positionen ohne Assetklasse den Fondstyp. " : null}
+            {totals.missingFundType ? "Wählen Sie unten für Positionen ohne passende Assetklasse den Fondstyp. " : null}
             {totals.missingPrices ? "Tragen Sie unten je Fonds die Kurse am 01.01. und 31.12. ein. " : null}
             <a href={`#${positionAnchor(firstMissing)}`} className="link font-medium">
               {firstMissingRow.status === "fundTypeMissing" ? "Zum Fondstyp" : "Zur Kurseingabe"} für {firstMissingRow.position.name}

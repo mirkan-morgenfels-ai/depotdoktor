@@ -10,10 +10,15 @@ import {
   distributionText,
   FUND_TYPE_MISSING_LABEL,
   MISSING_PRICES_LABEL,
+  TAX_METHOD_NOTES,
   taxStatusHint,
 } from "../tax/summary";
+import { FUND_TYPE_LABELS } from "../tax/constants";
 import { buildReport } from "../report";
 import { buildReportPdfData } from "../pdf-data";
+
+const FUND_TYPE_MISSING_PDF =
+  "Keine Schätzung: Fondstyp nicht gewählt. Der Export nennt keine Assetklasse, aus der sich der Fondstyp ergibt; bitte im Steuerreiter den Fondstyp wählen.";
 
 function tx(partial: Partial<Transaction> & Pick<Transaction, "id" | "date" | "type" | "amount">): Transaction {
   return {
@@ -88,7 +93,7 @@ describe("Positionen ohne Assetklasse: kein vorbelegter Fondstyp", () => {
     expect(taxStatusHint(summary.totals)).toBe("vorläufig (Kurs aus dem Export)");
   });
 
-  test("nach der Wahl 'Kein Fonds (Aktie, Anleihe)' keine Vorabpauschale und keine Kurse nötig: 0,00 €, vollständig", () => {
+  test("nach der Wahl 'Kein Fonds (Aktie, Anleihe, Derivat)' keine Vorabpauschale und keine Kurse nötig: 0,00 €, vollständig", () => {
     const summary = buildTaxSummary(twoYears, 2025, apply(chooseNone));
     expect(summary.rows[0]?.status).toBe("notApplicable");
     expect(summary.totals.status).toBe("complete");
@@ -169,7 +174,7 @@ describe("Positionen ohne Assetklasse: kein vorbelegter Fondstyp", () => {
     expect(JSON.stringify(data.taxSummary.slice(0, 3))).not.toContain("0,00");
     expect(data.taxTables[0]?.columns).toEqual(["Hinweis"]);
     expect(data.taxTables[0]?.rows.map((r) => r.cells)).toEqual([
-      ["Keine Schätzung: Fondstyp nicht gewählt. Der Export nennt keine Assetklasse; bitte im Steuerreiter den Fondstyp wählen."],
+      [FUND_TYPE_MISSING_PDF],
     ]);
     expect(data.taxTables[0]?.footnote).toContain("Fondstyp nicht gewählt · Kurs 01.01.2026: 100,00 € (vorläufig, Kurs aus dem Export)");
   });
@@ -178,5 +183,90 @@ describe("Positionen ohne Assetklasse: kein vorbelegter Fondstyp", () => {
     const data = buildReportPdfData(buildReport(twoYears), buildTaxSummary(twoYears, 2026, apply(chooseEquity)), meta);
     expect(data.taxSummary[0]?.value).toBe("33,60 €");
     expect(data.taxTables[0]?.footnote).toContain("Aktienfonds (Teilfreistellung 30 %)");
+  });
+});
+
+describe("Derivate sind kein Investmentfonds, Cash ohne Vorbelegung", () => {
+  const DERIVATIVE_ISIN = "DE000TEST0D1";
+  const derivativeBuy = tx({ id: "der-buy", date: "2025-05-02", type: "buy", amount: "-60", shares: "20", price: "3", isin: DERIVATIVE_ISIN, name: "Long Testindex", assetClass: "derivative" });
+  const derivativeSale = tx({ id: "der-sell", date: "2026-06-01", type: "sell", amount: "40", shares: "10", price: "4", isin: DERIVATIVE_ISIN, name: "Long Testindex", assetClass: "derivative" });
+  const derivative = [derivativeBuy, derivativeSale];
+  const cash = twoYears.map((t) => ({ ...t, assetClass: "cash" as const }));
+
+  test("Standard nach Assetklasse: Derivat 'Kein Fonds' (§ 1 Abs. 2 InvStG, BMF Rz. 1.4: Zertifikate sind kein Investmentvermögen), Cash keiner", () => {
+    const classes: AssetClass[] = ["derivative", "cash"];
+    const transactions = classes.map((assetClass, index) =>
+      tx({ id: `buy-${assetClass}`, date: "2026-02-02", type: "buy", amount: "-100", shares: "1", price: "100", isin: `XX000000001${index}`, name: `Position ${index}`, assetClass }),
+    );
+    expect(buildTaxPositions(transactions, 2026).map((p) => `${p.assetClass}: ${defaultFundType(p)}`)).toEqual(["derivative: none", "cash: null"]);
+  });
+
+  test("Derivat mit Bestand am 31.12.2026 ohne Wahl: 0,00 € statt vorläufig 10 × 3,00 × 3,2 % × 0,7 = 0,67 €, vollständig, kein Feld für angesetzte Vorabpauschalen, Gewinn 10 × (4,00 − 3,00) = 10,00 €", () => {
+    const summary = buildTaxSummary(derivative, 2026, EMPTY_TAX_INPUTS, { "der-sell": "5,00" });
+    const row = summary.rows[0]!;
+    expect(row.settings.fundType).toBe("none");
+    expect(row.heldAtYearEnd).toBe(true);
+    expect(row.status).toBe("notApplicable");
+    expect(summary.totals.status).toBe("complete");
+    expect(summary.totals.vorabpauschale.toFixed(2)).toBe("0.00");
+    expect(summary.totals.tax.toFixed(2)).toBe("0.00");
+    expect(taxStatusHint(summary.totals)).toBeNull();
+    expect(row.sales.map((s) => `${s.creditAllowed} ${s.creditNeedsFundType} ${s.gain.toFixed(2)}`)).toEqual(["false false 10.00"]);
+  });
+
+  test("Trade-Republic-Export: Assetklasse DERIVATIVE und WARRANT 'Kein Fonds', FUND weiter Aktienfonds", () => {
+    const csv = [
+      '"datetime","date","account_type","category","type","asset_class","name","symbol","shares","price","amount","fee","tax","currency","isin"',
+      '"2025-05-02T09:00:00.000Z","2025-05-02","DEFAULT","TRADING","BUY","DERIVATIVE","Long Testindex","","20.0000000000","3.00","-60.00","0.00","0.00","EUR","DE000TEST0D1"',
+      '"2025-05-05T09:00:00.000Z","2025-05-05","DEFAULT","TRADING","BUY","WARRANT","Call Musterwerk","","100.0000000000","0.50","-50.00","0.00","0.00","EUR","DE000TEST0W2"',
+      '"2025-05-06T09:00:00.000Z","2025-05-06","DEFAULT","TRADING","BUY","FUND","Testfonds Welt UCITS ETF","","10.0000000000","100.00","-1000.00","0.00","0.00","EUR","IE00TEST0001"',
+      "",
+    ].join("\n");
+    const parsed = parseBrokerCsv(csv);
+    if (!parsed.ok) throw new Error(parsed.error);
+    const summary = buildTaxSummary(parsed.transactions, 2025);
+    expect(summary.rows.map((r) => `${r.position.name}: ${r.position.assetClass} ${r.settings.fundType} ${r.status}`)).toEqual([
+      "Call Musterwerk: derivative none notApplicable",
+      "Long Testindex: derivative none notApplicable",
+      "Testfonds Welt UCITS ETF: fund equity missing",
+    ]);
+  });
+
+  test("Cash ohne Vorbelegung: 'fundTypeMissing'; nach 'Sonstiger Fonds' vorläufig 15 × 100 × 3,2 % × 0,7 = 33,60 €, steuerpflichtig 33,60 € ohne Teilfreistellung, Steuer 33,60 × 26,375 % = 8,86 €; nach 'Kein Fonds' 0,00 €", () => {
+    const without = buildTaxSummary(cash, 2026);
+    expect(without.rows[0]?.settings.fundType).toBeNull();
+    expect(without.rows[0]?.status).toBe("fundTypeMissing");
+    expect(taxStatusHint(without.totals)).toBe(FUND_TYPE_MISSING_LABEL);
+
+    const other = buildTaxSummary(cash, 2026, apply({ type: "setFundType", positionKey: KEY, fundType: "other" }));
+    expect(other.rows[0]?.status).toBe("provisional");
+    expect(other.totals.vorabpauschale.toFixed(2)).toBe("33.60");
+    expect(other.totals.taxable.toFixed(2)).toBe("33.60");
+    expect(other.totals.tax.toFixed(2)).toBe("8.86");
+
+    const none = buildTaxSummary(cash, 2026, apply(chooseNone));
+    expect(none.rows[0]?.status).toBe("notApplicable");
+    expect(none.totals.vorabpauschale.toFixed(2)).toBe("0.00");
+  });
+
+  test("PDF wie Ansicht: Derivat mit 0,00 € und 'Kein Fonds (Aktie, Anleihe, Derivat)', Cash mit '–' und 'Fondstyp wählen', Methodenhinweis 04 nennt beides", () => {
+    expect(FUND_TYPE_LABELS.none).toBe("Kein Fonds (Aktie, Anleihe, Derivat)");
+    const data = buildReportPdfData(buildReport(derivative), buildTaxSummary(derivative, 2026), meta);
+    for (const metric of data.taxSummary.slice(0, 3)) {
+      expect(metric.value).toMatch(/^0,00\s€$/);
+      expect(metric.hint).not.toContain("Fondstyp wählen");
+    }
+    expect(data.taxTables[0]?.columns).toEqual(["Hinweis"]);
+    expect(data.taxTables[0]?.rows.map((r) => r.cells)).toEqual([["Keine Vorabpauschale: kein Fonds (z. B. Einzelaktie, Anleihe oder Derivat)."]]);
+    expect(data.taxTables[0]?.footnote).toMatch(/^Kein Fonds \(Aktie, Anleihe, Derivat\) · Verkauf 01\.06\.2026, 10 Stück: .*Gewinn 10,00\s€ \(FIFO\)$/);
+
+    const cashData = buildReportPdfData(buildReport(cash), buildTaxSummary(cash, 2026), meta);
+    expect(cashData.taxSummary[0]?.value).toBe("–");
+    expect(cashData.taxSummary[0]?.hint).toContain("Fondstyp wählen");
+    expect(cashData.taxTables[0]?.rows.map((r) => r.cells)).toEqual([[FUND_TYPE_MISSING_PDF]]);
+
+    expect(TAX_METHOD_NOTES[3]).toContain("Aktie, Anleihe, Krypto und Derivat (Zertifikat, Optionsschein, Hebelprodukt) als kein Fonds");
+    expect(TAX_METHOD_NOTES[3]).toContain("bei der Assetklasse „Cash“");
+    expect(data.taxMethod[3]).toBe(TAX_METHOD_NOTES[3]);
   });
 });
