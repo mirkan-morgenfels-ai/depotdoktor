@@ -1,6 +1,6 @@
 # Prüfung an echten Broker-Exporten
 
-Anleitung für den Autor, Stand der Recherche 20.10.2026, ergänzt am 22.10.2026 (Fondstyp bei Derivaten und Cash, Hinweis „nur PRIME+“ im Upload-Feld, Hinweise aus den Testdateien von Portfolio Performance). Offen ist laut [verifikation.md](verifikation.md) noch der Abgleich von DepotDoktor mit echten Exporten von Trade Republic und Scalable Capital. Bisher sind Parser, Kennzahlen und Steuerlogik nur an synthetischen Testdateien (`packages/csv/fixtures/`), an Handrechnungen und an den Rechenbeispielen des BMF geprüft. Diese Anleitung beschreibt, wie Sie
+Anleitung für den Autor, Stand der Recherche 20.10.2026, ergänzt am 22.10.2026 (Fondstyp bei Derivaten und Cash, Hinweis „nur PRIME+“ im Upload-Feld, Hinweise aus den Testdateien von Portfolio Performance) und am 23.10.2026 (Fondstyp nach dem Fondsnamen, Abschnitt 3.7). Offen ist laut [verifikation.md](verifikation.md) noch der Abgleich von DepotDoktor mit echten Exporten von Trade Republic und Scalable Capital. Bisher sind Parser, Kennzahlen und Steuerlogik nur an synthetischen Testdateien (`packages/csv/fixtures/`), an Handrechnungen und an den Rechenbeispielen des BMF geprüft. Diese Anleitung beschreibt, wie Sie
 
 1. den Export bei Trade Republic und Scalable Capital erzeugen,
 2. die Datei in DepotDoktor laden,
@@ -205,7 +205,7 @@ Zulässige Abweichungen: andere Kurse als die der Bank, Kauf im Jahr 2025 (Zwöl
 
 ### 3.7 Teilfreistellung je Fondstyp
 
-Ist: das Auswahlfeld „Fondstyp“ je Position im Reiter „Steuer“. Bei Trade Republic ist er aus der Assetklasse des Exports vorbelegt: Aktie, Anleihe, Krypto und Derivat als „Kein Fonds (Aktie, Anleihe, Derivat)“, ETF und Fonds als Aktienfonds; bei Cash und ohne erkannte Assetklasse steht „Bitte wählen“. Bei Scalable Capital steht immer „Bitte wählen“, weil der Export keine Assetklasse nennt.
+Ist: das Auswahlfeld „Fondstyp“ je Position im Reiter „Steuer“. Bei Trade Republic ist er aus der Assetklasse des Exports vorbelegt: Aktie, Anleihe, Krypto und Derivat als „Kein Fonds (Aktie, Anleihe, Derivat)“, ETF und Fonds als Aktienfonds; bei Cash, ohne erkannte Assetklasse und seit 23.10.2026 bei ETF und Fonds, deren Name auf einen Renten-, Geldmarkt-, Misch-, Immobilien- oder Rohstofffonds hindeutet (etwa „Bond“, „Anleihen“, „Geldmarkt“, „Overnight“, „Multi-Asset“, „Immobilien“, „Commodity“; Liste in [verifikation.md](verifikation.md), Abschnitt „Fondstyp nach dem Fondsnamen 23.10.2026“), steht „Bitte wählen“. Bei Scalable Capital steht immer „Bitte wählen“, weil der Export keine Assetklasse nennt.
 
 Soll: die Einstufung in den Fondsunterlagen und, sofern ausgewiesen, der Teilfreistellungssatz im Dokument der Bank zur Vorabpauschale oder in der Verkaufsabrechnung.
 
@@ -218,7 +218,7 @@ Soll: die Einstufung in den Fondsunterlagen und, sofern ausgewiesen, der Teilfre
 | Sonstiger Fonds, etwa Renten- oder Geldmarkt-ETF | keine der Quoten | keine |
 | Einzelaktie, Anleihe, Derivat (Zertifikat, Optionsschein, Hebelprodukt), Kontoguthaben | kein Investmentfonds (§ 1 Abs. 2 InvStG; für Zertifikate BMF-Schreiben vom 21.05.2019, Rz. 1.4) | „Kein Fonds (Aktie, Anleihe, Derivat)“, keine Vorabpauschale |
 
-Erwartung: Fondstyp wie in den Fondsunterlagen; „Steuerpflichtig“ = „Vorabpauschale“ × (1 − Teilfreistellungssatz). Achtung bei Trade Republic: Ein Renten- oder Geldmarkt-ETF ist als Aktienfonds vorbelegt und muss von Hand umgestellt werden; Trade Republic führt ETFs als Assetklasse `FUND`. Derivate sind seit 22.10.2026 als „Kein Fonds (Aktie, Anleihe, Derivat)“ vorbelegt; prüfen Sie, ob die Abrechnung für sie keine Vorabpauschale ausweist.
+Erwartung: Fondstyp wie in den Fondsunterlagen; „Steuerpflichtig“ = „Vorabpauschale“ × (1 − Teilfreistellungssatz). Achtung bei Trade Republic: Trade Republic führt ETFs als Assetklasse `FUND`. Ein Renten- oder Geldmarkt-ETF steht nur dann auf „Bitte wählen“, wenn sein Name im Export eines der Wörter enthält; sonst ist er als Aktienfonds vorbelegt und muss von Hand umgestellt werden. Notieren Sie im Prüfprotokoll, ob der Export ausgeschriebene Fondsnamen (etwa „Core Euro Government Bond“) oder abgekürzte Börsennamen (etwa „GOV.BD“) enthält und welche Ihrer Nicht-Aktienfonds trotzdem als Aktienfonds vorbelegt sind. Derivate sind seit 22.10.2026 als „Kein Fonds (Aktie, Anleihe, Derivat)“ vorbelegt; prüfen Sie, ob die Abrechnung für sie keine Vorabpauschale ausweist.
 
 ### 3.8 Allokation
 

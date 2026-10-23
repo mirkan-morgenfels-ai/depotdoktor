@@ -4,13 +4,13 @@ import { DISCLAIMER_LONG } from "@portfolio/legal";
 import { projectDisplayUrl } from "@/lib/site";
 import type { PerformanceReport } from "./report";
 import type { TaxRow, TaxSummary } from "./tax/summary";
-import { distributionText, fundTypeLabel, noHoldingText, TAX_METHOD_NOTES, taxStatusHint } from "./tax/summary";
+import { distributionText, fundTypeLabel, fundTypeMissingPdfText, noHoldingText, TAX_METHOD_NOTES, taxStatusHint } from "./tax/summary";
 import { isRunningTaxYear, RUNNING_TAX_YEAR_LABEL } from "./tax/year";
 import { formatEur, formatNumber, formatPercent } from "./money";
 import { formatDateDe } from "./dates";
 import { timestampForFilename } from "./download";
 import { amountKpis, PERFORMANCE_EXPLANATION, performanceKpis, periodText } from "./kpis";
-import { BROKER_LABELS } from "./labels";
+import { BROKER_LABELS, bookingCountText } from "./labels";
 
 export const TAX_TABLE_COLUMNS = ["Anteil", "Stück", "Monate", "Basisertrag", "Vorabpausch.", "Steuerpfl.", "Steuer"];
 export const TAX_TABLE_WIDTHS = [0.2, 0.08, 0.08, 0.16, 0.18, 0.15, 0.15];
@@ -40,7 +40,7 @@ export interface PdfMeta {
 
 export function sourceLineText(meta: PdfMeta, period: string): string {
   const skipped = meta.skippedRows && meta.skippedRows > 0 ? ` · ${meta.skippedRows} übersprungen` : "";
-  return `${meta.fileName} · ${BROKER_LABELS[meta.broker]} · ${meta.transactionCount} Buchungen${skipped} · Zeitraum ${period}`;
+  return `${meta.fileName} · ${BROKER_LABELS[meta.broker]} · ${bookingCountText(meta.transactionCount)}${skipped} · Zeitraum ${period}`;
 }
 
 function joinHints(...parts: Array<string | null | undefined>): string {
@@ -56,9 +56,7 @@ function priceText(row: TaxRow, field: "yearStartPrice" | "yearEndPrice"): strin
 function hintText(row: TaxRow, year: number): string {
   if (row.estimate?.fundType === "none") return "Keine Vorabpauschale: kein Fonds (z. B. Einzelaktie, Anleihe oder Derivat).";
   if (!row.heldAtYearEnd) return noHoldingText(year);
-  if (row.status === "fundTypeMissing") {
-    return "Keine Schätzung: Fondstyp nicht gewählt. Der Export nennt keine Assetklasse, aus der sich der Fondstyp ergibt; bitte im Steuerreiter den Fondstyp wählen.";
-  }
+  if (row.status === "fundTypeMissing") return fundTypeMissingPdfText(row.position);
   return row.sameSourcePrefill
     ? `Keine Schätzung: Der Export enthält für ${year} keinen eigenen Kurs; bitte Kurse am 01.01. und 31.12. eintragen.`
     : "Keine Schätzung: Kurse am 01.01. und 31.12. fehlen; bitte eintragen.";

@@ -11,7 +11,7 @@ import { buildTaxSummary, type SaleCreditInputs } from "@/lib/depotdoktor/tax/su
 import { EMPTY_TAX_INPUTS, taxInputsReducer } from "@/lib/depotdoktor/tax/inputs";
 import { defaultTaxYear, isRunningTaxYear, TAX_YEARS } from "@/lib/depotdoktor/tax/year";
 import { buildReportPdfData } from "@/lib/depotdoktor/pdf-data";
-import { BROKER_LABELS } from "@/lib/depotdoktor/labels";
+import { BROKER_LABELS, bookingCountText } from "@/lib/depotdoktor/labels";
 import { CSV_MIME_TYPE, transactionsToCsv } from "@/lib/depotdoktor/export-csv";
 import { downloadBlob, timestampForFilename } from "@/lib/depotdoktor/download";
 import { FileDrop } from "./FileDrop";
@@ -174,7 +174,7 @@ export function DepotDoktorApp() {
                 <span className="font-medium text-ink">{fileName}</span>
                 <span className="text-slate">
                   {" "}
-                  · {BROKER_LABELS[parsed.broker]} · {parsed.transactions.length} Buchungen
+                  · {BROKER_LABELS[parsed.broker]} · {bookingCountText(parsed.transactions.length)}
                   {parsed.skippedRows > 0 ? ` · ${parsed.skippedRows} übersprungen` : ""}
                 </span>
               </p>

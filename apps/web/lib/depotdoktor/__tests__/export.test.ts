@@ -8,7 +8,8 @@ import { buildTaxSummary, defaultPositionSettings, parsePriceInput } from "../ta
 import type { TaxInputs } from "../tax/inputs";
 import { buildTaxPositions } from "../tax/positions";
 import { buildReport } from "../report";
-import { buildReportPdfData } from "../pdf-data";
+import { buildReportPdfData, sourceLineText } from "../pdf-data";
+import { bookingCountText } from "../labels";
 import { d } from "../money";
 
 function fixtureTransactions(name: string): Transaction[] {
@@ -258,6 +259,12 @@ describe("PDF-Daten", () => {
     expect(withSkipped.sourceLine).toBe("scalable.csv · Scalable Capital · 6 Buchungen · 1 übersprungen · Zeitraum 06.01.2026 bis 20.06.2026");
     expect(withSkipped.notes).toContain("Einlesen: Zeile 7: Status „Pending“, übersprungen.");
     expect(data.sourceLine).not.toContain("übersprungen");
+  });
+
+  test("Zahl der Buchungen in der Einzahl bei genau einer Buchung: „1 Buchung“, sonst „0 Buchungen“, „2 Buchungen“", () => {
+    expect([0, 1, 2, 6].map(bookingCountText)).toEqual(["0 Buchungen", "1 Buchung", "2 Buchungen", "6 Buchungen"]);
+    const meta = { fileName: "ein-kauf.csv", broker: "traderepublic" as const, transactionCount: 1, generatedAt: new Date(Date.UTC(2026, 9, 8)) };
+    expect(sourceLineText(meta, "06.05.2025")).toBe("ein-kauf.csv · Trade Republic · 1 Buchung · Zeitraum 06.05.2025");
   });
 
   test("Steuertabelle mit Kurzkopf und Spaltenbreiten, die sich zu 1 summieren", () => {

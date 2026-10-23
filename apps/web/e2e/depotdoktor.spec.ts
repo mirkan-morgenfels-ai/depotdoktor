@@ -274,7 +274,7 @@ test("Scalable-Datei per Upload: übersprungene Zeile, gleicher Zeitraum, Fondst
     await expect(page.getByTestId(testId)).not.toContainText(/\d,\d\d\s€/);
   }
   const jumpHint = page.getByTestId("tax-prices-hint");
-  await expect(jumpHint).toContainText("Wählen Sie unten für Positionen ohne passende Assetklasse den Fondstyp.");
+  await expect(jumpHint).toContainText("Wählen Sie unten den Fondstyp, wo „Bitte wählen“ steht.");
   await expect(jumpHint).not.toContainText("Kurse am 01.01.");
   await expect(jumpHint.getByRole("link")).toHaveText("Zum Fondstyp für Musterwerk AG");
 
@@ -337,6 +337,48 @@ test("Trade-Republic-Derivat: Fondstyp „Kein Fonds“ vorbelegt, keine Vorabpa
   await expect(position.getByTestId("tax-sale-credit")).toHaveCount(0);
   await expect(position.getByTestId("tax-sale-credit-fund-type")).toHaveCount(0);
   await expect(page.getByTestId("tax-vorabpauschale")).toHaveText(/^Vorabpauschale 2026\s*0,00\s€\s*Summe aller Positionen$/);
+});
+
+test("Trade-Republic-Renten-ETF: „Bitte wählen“ statt Aktienfonds, Hinweis nennt das Wort aus dem Namen, nach „Sonstiger Fonds“ ohne Teilfreistellung", async ({ page }) => {
+  const bondName = "Test Euro Government Bond UCITS ETF";
+  const bondFile = {
+    name: "renten-etf.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      [
+        '"datetime","date","account_type","category","type","asset_class","name","symbol","shares","price","amount","fee","tax","currency","isin"',
+        `"2025-05-06T09:00:00.000Z","2025-05-06","DEFAULT","TRADING","BUY","FUND","${bondName}","","10.0000000000","100.00","-1000.00","0.00","0.00","EUR","IE00TEST0B01"`,
+        "",
+      ].join("\n"),
+      "utf8",
+    ),
+  };
+  await page.goto("/projects/depotdoktor");
+  await page.getByTestId("file-input").setInputFiles(bondFile);
+  await expect(page.getByTestId("report-section")).toContainText("Trade Republic · 1 Buchung");
+
+  await page.getByRole("tab", { name: "Steuer" }).click();
+  await expect(page.getByTestId("tax-year")).toHaveValue("2025");
+  const position = taxPosition(page, bondName);
+  const fundType = position.getByRole("combobox", { name: "Fondstyp" });
+  const missingText =
+    "Fondstyp wählen: Der Export führt diese Position als Fonds, ihr Name enthält aber „Bond“ und deutet damit auf einen Renten-, Geldmarkt-, Misch-, Immobilien- oder Rohstofffonds hin. Bis Sie den Fondstyp wählen, wird nichts geschätzt, denn eine falsche Teilfreistellung verfälscht die Steuer. Maßgeblich ist die Einstufung in den Anlagebedingungen des Fonds; Renten-, Geldmarkt- und Rohstofffonds ohne Aktienquote sind „Sonstiger Fonds (keine Teilfreistellung)“.";
+  await expect(fundType).toHaveValue("");
+  await expect(fundType.locator("option:checked")).toHaveText("Bitte wählen");
+  await expect(fundType).toHaveAttribute("aria-invalid", "true");
+  await expect(fundType).toHaveAccessibleDescription(missingText);
+  await expect(page.getByTestId("tax-fund-type-missing")).toHaveText(missingText);
+  await expect(page.getByTestId("tax-prices-hint")).toContainText("Wählen Sie unten den Fondstyp, wo „Bitte wählen“ steht.");
+  for (const testId of TAX_TILES) await expect(page.getByTestId(testId)).toHaveText(/–\s*Fondstyp wählen/);
+
+  await fundType.selectOption("other");
+  await expect(page.getByTestId("tax-fund-type-missing")).toHaveCount(0);
+  await expect(page.getByTestId("tax-vorabpauschale")).toHaveText(/^Vorabpauschale 2025\s*–\s*Kurse eintragen/);
+  await position.getByRole("textbox", { name: "Kurs 01.01.2025" }).fill("100,00");
+  await position.getByRole("textbox", { name: "Kurs 31.12.2025" }).fill("102,00");
+  await expect(page.getByTestId("tax-vorabpauschale")).toHaveText(/^Vorabpauschale 2025\s*11,81\s€\s*Summe aller Positionen$/);
+  await expect(page.getByTestId("tax-taxable")).toHaveText(/^Steuerpflichtig nach Teilfreistellung\s*11,81\s€$/);
+  await expect(page.getByTestId("tax-estimated-tax")).toHaveText(/^Geschätzte Steuer auf Vorabpauschale\s*3,11\s€/);
 });
 
 test("Unbekanntes Format bricht mit Meldung ab", async ({ page }) => {
