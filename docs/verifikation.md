@@ -1,6 +1,6 @@
 # Verifikation und offene Punkte (K1 DepotDoktor)
 
-Stand: 22.10.2026 (Fondstyp-Vorbelegung bei Derivaten und Cash sowie Hinweis „nur PRIME+“ im Upload-Feld, ohne Änderung an Rechenwegen, siehe den letzten Abschnitt; davor die Anleitung für die Prüfung an echten Exporten in [pruefung-echte-exporte.md](pruefung-echte-exporte.md), ohne Änderung an Code und Rechenwegen, Abschnitt „Anleitung für die Prüfung an echten Exporten 20.10.2026“; davor die Framework-Migration auf Next.js 16, ESLint 10 und Vitest 5 ohne fachliche Änderung, Abschnitt „Framework-Migration 17.10.2026“; fachlich zuletzt die restlichen Entscheidungen und der Abgleich mit den Rechenbeispielen des BMF im Abschnitt „Restliche Entscheidungen 08.10.2026“; davor CSV-Export für deutsches Excel; zur Steuerlogik die Abschnitte „Nachkontrolle 07.10.2026“ und „Nachbesserung 07.10.2026“). Quellen zur Steuerlogik gehören hierher, nicht in den Code.
+Stand: 23.10.2026 (keine Vorbelegung als Aktienfonds bei ETF und Fonds, deren Name auf einen Renten-, Geldmarkt-, Misch-, Immobilien- oder Rohstofffonds hindeutet, ohne Änderung an Rechenwegen, siehe den letzten Abschnitt; davor die Fondstyp-Vorbelegung bei Derivaten und Cash sowie Hinweis „nur PRIME+“ im Upload-Feld, Abschnitt „Fondstyp bei Derivaten und Cash, Hinweis PRIME+ 22.10.2026“; davor die Anleitung für die Prüfung an echten Exporten in [pruefung-echte-exporte.md](pruefung-echte-exporte.md), ohne Änderung an Code und Rechenwegen, Abschnitt „Anleitung für die Prüfung an echten Exporten 20.10.2026“; davor die Framework-Migration auf Next.js 16, ESLint 10 und Vitest 5 ohne fachliche Änderung, Abschnitt „Framework-Migration 17.10.2026“; fachlich zuletzt die restlichen Entscheidungen und der Abgleich mit den Rechenbeispielen des BMF im Abschnitt „Restliche Entscheidungen 08.10.2026“; davor CSV-Export für deutsches Excel; zur Steuerlogik die Abschnitte „Nachkontrolle 07.10.2026“ und „Nachbesserung 07.10.2026“). Quellen zur Steuerlogik gehören hierher, nicht in den Code.
 
 ## Prüfstand der Steuerlogik
 
@@ -887,3 +887,58 @@ Lokal unter Windows 11 mit Node 22.23.2, pnpm 10.34.5 und Chromium Headless Shel
 | `pnpm build` | grün, Next.js 16.4.2 mit Turbopack, 11 Routen statisch |
 | `pnpm test:e2e` mit `CI=true` | 30 Tests grün im ersten Durchlauf, ohne Wiederholung (`depotdoktor.spec.ts` 16, `site.spec.ts` 14), darin axe-core bei 390, 768 und 1280 px ohne Verstöße und kein waagrechter Überlauf bei 320 px; danach Port 3811 frei |
 | `pnpm audit --prod` / `pnpm audit` | keine Meldung / nur braces über eslint-config-next (unverändert) |
+
+## Fondstyp nach dem Fondsnamen 23.10.2026
+
+Der Autor hat am 23.10.2026 die offenen Punkte an Claude gegeben („mach mit den offenen Punkten weiter“). Einer davon: ETF und Fonds waren immer als „Aktienfonds“ vorbelegt, auch Renten-, Geldmarkt- und Mischfonds; der Nutzer musste sie selbst umstellen (README, „Grenzen“). Bei Trade Republic betrifft das alle Fonds, denn der Export führt ETFs als Assetklasse `FUND` (Abschnitt „Fondstyp bei Derivaten und Cash, Hinweis PRIME+ 22.10.2026“, Punkt 2). Ein Renten- oder Geldmarkt-ETF bekam damit 30 % Teilfreistellung, und die geschätzte Steuer auf die Vorabpauschale war um 30 % zu niedrig. Geändert haben sich die Vorbelegung bei ETF und Fonds mit bestimmten Wörtern im Namen und die Hinweistexte dazu. Unverändert sind alle Rechenwege, die Teilfreistellungssätze, der Parser, die Rechtstexte und `packages/legal`.
+
+### Regel
+
+ETF und Fonds, deren Name eines der folgenden Wörter enthält, starten mit „Bitte wählen“ statt „Aktienfonds“; bis zur Wahl zeigen Kacheln und PDF „–“ mit „Fondstyp wählen“ wie bei Positionen ohne Assetklasse und bei Cash. Alle anderen ETF und Fonds bleiben „Aktienfonds“, Aktie, Anleihe, Krypto und Derivat bleiben „Kein Fonds“, auch wenn ihr Name eines der Wörter enthält.
+
+- Renten: „Bond“, „Bonds“, „Eurobond“, „Anleihe“, „Anleihen“ und Zusammensetzungen wie „Staatsanleihen“ oder „Unternehmensanleihe“, „Renten“, „Rentenfonds“, „Govt“, „Govies“, „Treasury“, „Treasuries“, „T-Bill“, „Pfandbrief“ und Zusammensetzungen
+- Geldmarkt: „Money Market“, „Geldmarkt“ und Zusammensetzungen wie „Geldmarktfonds“, „Overnight“, „€STR“, „ESTR“, „SOFR“
+- Misch: „Multi-Asset“, „Multi Asset“, „Mischfonds“, „Balanced“, „LifeStrategy“
+- Immobilien: „Immobilien“ und Zusammensetzungen, „Real Estate“, „REIT“, „REITs“, „Property“
+- Rohstoffe: „Commodity“, „Commodities“, „Rohstoff“ und Zusammensetzungen
+
+Groß- und Kleinschreibung zählen nicht. Gesucht wird nur nach ganzen Wörtern, damit etwa „Bondholder“, „Rentenversicherer“ oder „Treasure“ nicht treffen; deutsche Zusammensetzungen sind nur bei Anleihe, Pfandbrief, Geldmarkt, Immobilien und Rohstoff erlaubt. Das gefundene Wort steht im Hinweis, in der Schreibweise des Exports.
+
+Warum „Bitte wählen“ und nicht „Sonstiger Fonds“: Der Name ist nur ein Hinweis. Ein Fonds mit „LifeStrategy“ oder „Balanced“ im Namen kann Mischfonds (15 %) oder, bei mehr als 50 % Kapitalbeteiligungen laut Anlagebedingungen, Aktienfonds (30 %) sein; ein Immobilien- oder REIT-ETF kann als Aktienfonds eingestuft sein, wenn er in Aktien von Immobiliengesellschaften anlegt. „Sonstiger Fonds“ wäre dann ebenso still falsch wie vorher „Aktienfonds“. Wie bei Cash gilt deshalb: keine stille Annahme, sondern eine Wahl (Abschnitt „Restliche Entscheidungen 08.10.2026“, Punkt 2). Ein Fehltreffer kostet den Nutzer eine Auswahl, ein übersehener Rentenfonds bleibt so falsch wie bisher.
+
+Rechtsgrundlage, abgerufen am 23.10.2026 auf gesetze-im-internet.de: Aktien-, Misch- und Immobilienfonds sind Investmentfonds, die „gemäß den Anlagebedingungen“ fortlaufend mehr als 50 % bzw. mindestens 25 % in Kapitalbeteiligungen oder mehr als 50 % in Immobilien und Immobilien-Gesellschaften anlegen (§ 2 Abs. 6 Satz 1, Abs. 7 Satz 1, Abs. 9 Satz 1 InvStG). Teilfreistellung gibt es nur für diese Arten (§ 20 Abs. 1 bis 3 InvStG); ein Renten-, Geldmarkt- oder Rohstofffonds ohne diese Quoten ist ein sonstiger Investmentfonds ohne Teilfreistellung. Weist der Anleger nach, dass ein Fonds eine Quote während des Kalenderjahres tatsächlich durchgehend überschritten hat, wird die Teilfreistellung auf Antrag in der Veranlagung angewendet (§ 20 Abs. 4 InvStG); das bildet DepotDoktor nicht ab, maßgeblich für die Wahl bleiben die Anlagebedingungen.
+
+Grenzen: Namen ohne eines der Wörter, etwa abgekürzte Börsennamen wie „GOV.BD“, bleiben „Aktienfonds“. Ob Trade Republic im Export ausgeschriebene Fondsnamen oder Börsenkürzel führt, ist am echten Export zu prüfen ([pruefung-echte-exporte.md](pruefung-echte-exporte.md), Abschnitt 3.7). Eine freie, weiterverbreitbare Datenquelle für den Fondstyp je ISIN gibt es weiterhin nicht.
+
+### Texte
+
+- Ansicht, Hinweis an der Position (Beispiel „Bond“): „Fondstyp wählen: Der Export führt diese Position als Fonds, ihr Name enthält aber „Bond“ und deutet damit auf einen Renten-, Geldmarkt-, Misch-, Immobilien- oder Rohstofffonds hin. Bis Sie den Fondstyp wählen, wird nichts geschätzt, denn eine falsche Teilfreistellung verfälscht die Steuer. Maßgeblich ist die Einstufung in den Anlagebedingungen des Fonds; Renten-, Geldmarkt- und Rohstofffonds ohne Aktienquote sind „Sonstiger Fonds (keine Teilfreistellung)“.“ Der bisherige Text („Der Export nennt für diese Position keine Assetklasse …“) bleibt für Positionen ohne Assetklasse und für Cash.
+- PDF: „Keine Schätzung: Fondstyp nicht gewählt. Der Name enthält „Bond“ und deutet auf einen Renten-, Geldmarkt-, Misch-, Immobilien- oder Rohstofffonds hin; bitte im Steuerreiter den Fondstyp wählen.“ Sonst wie bisher.
+- Über den Kacheln: „Wählen Sie unten den Fondstyp, wo „Bitte wählen“ steht.“ statt „Wählen Sie unten für Positionen ohne passende Assetklasse den Fondstyp.“, weil die Assetklasse `FUND` hier zum Fonds passt.
+- Methodenhinweis 04 (Ansicht und PDF), zweiter Satz jetzt: „Ohne Assetklasse, etwa im Scalable-Export, bei der Assetklasse „Cash“ und bei ETF und Fonds, deren Name auf einen Renten-, Geldmarkt-, Misch-, Immobilien- oder Rohstofffonds hindeutet (etwa „Bond“, „Anleihen“, „Geldmarkt“, „Multi-Asset“, „Immobilien“, „Commodity“), steht dort „Bitte wählen“, und für die Position wird nichts geschätzt, bis Sie den Fondstyp wählen.“
+
+| Fall | alt | neu |
+|---|---|---|
+| Fonds „Test Euro Government Bond UCITS ETF“, Kauf 10 @ 100 € 2025 und 5 @ 110 € 2026, Jahr 2026 | „Aktienfonds“, vorläufig 15 × 100 × 3,2 % × 0,7 = 33,60 €, steuerpflichtig 33,60 × 0,7 = 23,52 €, Steuer 6,20 € | „Bitte wählen“, „–“ mit „Fondstyp wählen“; nach „Sonstiger Fonds“ 33,60 €, steuerpflichtig 33,60 €, Steuer 33,60 × 26,375 % = 8,86 € |
+| Trade Republic, `FUND` „Test Euro Government Bond UCITS ETF“, Kauf 10 @ 100 € am 06.05.2025, Jahr 2025, Kurse 100,00 und 102,00 eingetragen | „Aktienfonds“: 10 × 100 × 2,53 % × 0,7 = 17,71; Kauf im Mai, 4 Monate entfallen: × 8/12 = 11,81 €, steuerpflichtig × 0,7 = 8,26 € | „Bitte wählen“; nach „Sonstiger Fonds“ 11,81 €, steuerpflichtig 11,81 €, Steuer 11,8067 × 26,375 % = 3,11 € |
+| Trade Republic, `FUND` „Testfonds Welt UCITS ETF“ | „Aktienfonds“ | unverändert „Aktienfonds“ |
+| Beispieldatei, Scalable-Testdatei | | Ergebnisse unverändert |
+
+### Nebenbei: „1 Buchung“
+
+Bei einer Datei mit genau einer Buchung standen in der Zeile „Geladene Datei“ und in der Quellzeile des PDF „1 Buchungen“. Jetzt „1 Buchung“, sonst wie bisher „… Buchungen“ (`bookingCountText` in `labels.ts`).
+
+### Tests
+
+Sechs neue Unit-Tests in `fund-type.test.ts` (Wörter aus Namen und Gegenbeispiele, Vorbelegung nach Assetklasse und Name, Renten-ETF mit Handrechnung für „Sonstiger Fonds“, Hinweistexte in Ansicht und PDF, Trade-Republic-CSV mit zwei `FUND`-Positionen, Methodenhinweis 04); alle sechs schlugen gegen den alten Code fehl, die 17 bisherigen blieben grün. Ein neuer Unit-Test in `export.test.ts` für „1 Buchung“, ebenfalls vorher rot. E2E: neuer Test „Trade-Republic-Renten-ETF …“ (Vorbelegung, `aria-invalid`, Beschreibung des Auswahlfelds, Hinweis über den Kacheln, nach „Sonstiger Fonds“ und eingetragenen Kursen 11,81 €, 11,81 € und 3,11 €); im Test zur Scalable-Datei der neue Hinweis über den Kacheln.
+
+Prüfung am 23.10.2026:
+
+| Prüfung | Ergebnis |
+|---|---|
+| `pnpm typecheck` (einschließlich E2E-Dateien) | grün |
+| `pnpm lint` (alle sechs Pakete) | grün |
+| `pnpm test` | 291 Tests grün (csv 50, pdf 2, web 239); vorher 284, neu sind sechs Tests in `fund-type.test.ts` und einer in `export.test.ts` |
+| `pnpm build` | grün, alle Routen statisch |
+| `pnpm test:e2e` mit `CI=true` | 31 Tests grün im ersten Durchlauf (`depotdoktor.spec.ts` 17, `site.spec.ts` 14), darin axe-core ohne Verstöße; danach Port 3812 frei |
+| `pnpm audit --prod` | keine Meldung |

@@ -8,7 +8,10 @@ import {
   buildTaxSummary,
   defaultFundType,
   distributionText,
+  fundNameHint,
   FUND_TYPE_MISSING_LABEL,
+  fundTypeMissingPdfText,
+  fundTypeMissingText,
   MISSING_PRICES_LABEL,
   TAX_METHOD_NOTES,
   taxStatusHint,
@@ -267,6 +270,159 @@ describe("Derivate sind kein Investmentfonds, Cash ohne Vorbelegung", () => {
 
     expect(TAX_METHOD_NOTES[3]).toContain("Aktie, Anleihe, Krypto und Derivat (Zertifikat, Optionsschein, Hebelprodukt) als kein Fonds");
     expect(TAX_METHOD_NOTES[3]).toContain("bei der Assetklasse „Cash“");
+    expect(data.taxMethod[3]).toBe(TAX_METHOD_NOTES[3]);
+  });
+});
+
+describe("ETF und Fonds, deren Name auf einen Fonds ohne Aktienfondsquote hindeutet, ohne Vorbelegung", () => {
+  const BOND_ISIN = "IE00TEST0B01";
+  const BOND_NAME = "Test Euro Government Bond UCITS ETF";
+  const bond = twoYears.map((t) => ({ ...t, isin: BOND_ISIN, name: BOND_NAME, assetClass: "fund" as const }));
+  const chooseOther: TaxInputAction = { type: "setFundType", positionKey: BOND_ISIN, fundType: "other" };
+
+  test("Hinweiswort aus dem Namen, in der Schreibweise des Exports; nur ganze Wörter und deutsche Zusammensetzungen", () => {
+    const hints = [
+      "iShares Core Euro Government Bond UCITS ETF",
+      "Xtrackers II Eurozone Government Bonds",
+      "Deka Deutsche Staatsanleihen",
+      "Testfonds Unternehmensanleihe 2030",
+      "Testfonds Renten-ETF",
+      "Amundi Prime Euro Govies",
+      "ISHSIII-EO GOVT BD 1-3YR",
+      "iShares $ Treasury Bond 1-3yr",
+      "Testfonds US T-Bills",
+      "Testfonds Pfandbriefe",
+      "Testfonds Money Market EUR",
+      "Testfonds Geldmarktfonds",
+      "Xtrackers II EUR Overnight Rate Swap",
+      "Testfonds €STR",
+      "Vanguard LifeStrategy 60% Equity",
+      "Testfonds Multi-Asset Global",
+      "Testfonds Mischfonds",
+      "Testfonds Balanced",
+      "Testfonds Wohnimmobilien",
+      "Testfonds Real Estate Europe",
+      "Testfonds Global REIT",
+      "iShares Developed Markets Property Yield",
+      "Testfonds Diversified Commodity Swap",
+      "Testfonds Rohstoffe",
+    ];
+    expect(hints.map(fundNameHint)).toEqual([
+      "Bond",
+      "Bonds",
+      "Staatsanleihen",
+      "Unternehmensanleihe",
+      "Renten",
+      "Govies",
+      "GOVT",
+      "Treasury",
+      "T-Bills",
+      "Pfandbriefe",
+      "Money Market",
+      "Geldmarktfonds",
+      "Overnight",
+      "€STR",
+      "LifeStrategy",
+      "Multi-Asset",
+      "Mischfonds",
+      "Balanced",
+      "Wohnimmobilien",
+      "Real Estate",
+      "REIT",
+      "Property",
+      "Commodity",
+      "Rohstoffe",
+    ]);
+    const equityNames = [
+      "Testfonds Welt UCITS ETF",
+      "Vanguard FTSE All-World High Dividend Yield",
+      "iShares Core MSCI World",
+      "Testfonds Bondholder Value",
+      "Testfonds Rentenversicherer",
+      "Testfonds Treasure Hunt",
+    ];
+    expect(equityNames.map(fundNameHint)).toEqual(equityNames.map(() => null));
+  });
+
+  test("Standard: ETF und Fonds mit Hinweiswort keiner, ohne Hinweiswort Aktienfonds; Aktie und Anleihe mit Hinweiswort weiter kein Fonds", () => {
+    const cases: Array<[AssetClass, string]> = [
+      ["fund", BOND_NAME],
+      ["etf", "Testfonds Geldmarkt EUR"],
+      ["fund", "Testfonds Welt UCITS ETF"],
+      ["etf", "Testfonds Welt UCITS ETF"],
+      ["stock", "Testfonds Real Estate AG"],
+      ["bond", "Test Government Bond 2030"],
+    ];
+    const transactions = cases.map(([assetClass, name], index) =>
+      tx({ id: `buy-${index}`, date: "2026-02-02", type: "buy", amount: "-100", shares: "1", price: "100", isin: `XX000000002${index}`, name, assetClass }),
+    );
+    const positions = buildTaxPositions(transactions, 2026);
+    expect(positions.map((p) => `${p.assetClass} ${p.name}: ${defaultFundType(p)}`).sort()).toEqual(
+      [
+        `fund ${BOND_NAME}: null`,
+        "etf Testfonds Geldmarkt EUR: null",
+        "fund Testfonds Welt UCITS ETF: equity",
+        "etf Testfonds Welt UCITS ETF: equity",
+        "stock Testfonds Real Estate AG: none",
+        "bond Test Government Bond 2030: none",
+      ].sort(),
+    );
+  });
+
+  test("Renten-ETF ohne Wahl 'fundTypeMissing' statt vorläufig 33,60 € mit 30 % Teilfreistellung (23,52 €); nach 'Sonstiger Fonds' 15 × 100 × 3,2 % × 0,7 = 33,60 €, steuerpflichtig 33,60 €, Steuer 33,60 × 26,375 % = 8,86 €", () => {
+    const without = buildTaxSummary(bond, 2026);
+    expect(without.rows[0]?.settings.fundType).toBeNull();
+    expect(without.rows[0]?.status).toBe("fundTypeMissing");
+    expect(taxStatusHint(without.totals)).toBe(FUND_TYPE_MISSING_LABEL);
+
+    const other = buildTaxSummary(bond, 2026, apply(chooseOther));
+    expect(other.rows[0]?.status).toBe("provisional");
+    expect(other.totals.vorabpauschale.toFixed(2)).toBe("33.60");
+    expect(other.totals.taxable.toFixed(2)).toBe("33.60");
+    expect(other.totals.tax.toFixed(2)).toBe("8.86");
+  });
+
+  test("Hinweistexte in Ansicht und PDF nennen den Grund: Hinweiswort bei Fonds, fehlende Assetklasse sonst", () => {
+    const [bondPosition] = buildTaxPositions(bond, 2026);
+    const [unknownPosition] = buildTaxPositions(twoYears, 2026);
+    expect(fundTypeMissingText(bondPosition!)).toBe(
+      "Fondstyp wählen: Der Export führt diese Position als Fonds, ihr Name enthält aber „Bond“ und deutet damit auf einen Renten-, Geldmarkt-, Misch-, Immobilien- oder Rohstofffonds hin. Bis Sie den Fondstyp wählen, wird nichts geschätzt, denn eine falsche Teilfreistellung verfälscht die Steuer. Maßgeblich ist die Einstufung in den Anlagebedingungen des Fonds; Renten-, Geldmarkt- und Rohstofffonds ohne Aktienquote sind „Sonstiger Fonds (keine Teilfreistellung)“.",
+    );
+    expect(fundTypeMissingText(unknownPosition!)).toBe(
+      "Fondstyp wählen: Der Export nennt für diese Position keine Assetklasse, aus der sich der Fondstyp ergibt. Bis Sie den Fondstyp wählen, wird nichts geschätzt, denn eine falsche Teilfreistellung verfälscht die Steuer. Für Aktien, Anleihen und Derivate wählen Sie „Kein Fonds (Aktie, Anleihe, Derivat)“.",
+    );
+    expect(fundTypeMissingPdfText(bondPosition!)).toBe(
+      "Keine Schätzung: Fondstyp nicht gewählt. Der Name enthält „Bond“ und deutet auf einen Renten-, Geldmarkt-, Misch-, Immobilien- oder Rohstofffonds hin; bitte im Steuerreiter den Fondstyp wählen.",
+    );
+    expect(fundTypeMissingPdfText(unknownPosition!)).toBe(FUND_TYPE_MISSING_PDF);
+
+    const data = buildReportPdfData(buildReport(bond), buildTaxSummary(bond, 2026), meta);
+    expect(data.taxSummary[0]?.value).toBe("–");
+    expect(data.taxSummary[0]?.hint).toContain("Fondstyp wählen");
+    expect(data.taxTables[0]?.rows.map((r) => r.cells)).toEqual([[fundTypeMissingPdfText(bondPosition!)]]);
+  });
+
+  test("Trade-Republic-Export: FUND mit 'Government Bond' im Namen ohne Vorbelegung, FUND ohne Hinweiswort Aktienfonds", () => {
+    const csv = [
+      '"datetime","date","account_type","category","type","asset_class","name","symbol","shares","price","amount","fee","tax","currency","isin"',
+      `"2025-05-06T09:00:00.000Z","2025-05-06","DEFAULT","TRADING","BUY","FUND","${BOND_NAME}","","10.0000000000","100.00","-1000.00","0.00","0.00","EUR","${BOND_ISIN}"`,
+      '"2025-05-06T09:05:00.000Z","2025-05-06","DEFAULT","TRADING","BUY","FUND","Testfonds Welt UCITS ETF","","10.0000000000","100.00","-1000.00","0.00","0.00","EUR","IE00TEST0001"',
+      "",
+    ].join("\n");
+    const parsed = parseBrokerCsv(csv);
+    if (!parsed.ok) throw new Error(parsed.error);
+    const summary = buildTaxSummary(parsed.transactions, 2025);
+    expect(summary.rows.map((r) => `${r.position.name}: ${r.position.assetClass} ${r.settings.fundType} ${r.status}`)).toEqual([
+      `${BOND_NAME}: fund null fundTypeMissing`,
+      "Testfonds Welt UCITS ETF: fund equity missing",
+    ]);
+  });
+
+  test("Methodenhinweis 04 nennt die Hinweiswörter, Ansicht und PDF gleich", () => {
+    expect(TAX_METHOD_NOTES[3]).toContain(
+      "bei ETF und Fonds, deren Name auf einen Renten-, Geldmarkt-, Misch-, Immobilien- oder Rohstofffonds hindeutet (etwa „Bond“, „Anleihen“, „Geldmarkt“, „Multi-Asset“, „Immobilien“, „Commodity“)",
+    );
+    const data = buildReportPdfData(buildReport(bond), buildTaxSummary(bond, 2026), meta);
     expect(data.taxMethod[3]).toBe(TAX_METHOD_NOTES[3]);
   });
 });

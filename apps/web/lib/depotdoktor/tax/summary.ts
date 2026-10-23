@@ -104,8 +104,41 @@ const DEFAULT_FUND_TYPES: Record<AssetClass, FundType | null> = {
   unknown: null,
 };
 
+const NON_EQUITY_FUND_WORD =
+  /(?<![\p{L}\p{N}])(?:eurobonds?|bonds?|\p{L}*anleihen?|renten(?:fonds)?|govt|govies|treasury|treasuries|t-bills?|\p{L}*pfandbriefe?|money market|\p{L}*geldmarkt\p{L}*|overnight|€str|estr|sofr|lifestrategy|multi[- ]asset|mischfonds|balanced|\p{L}*immobilien\p{L}*|real estate|reits?|property|commodity|commodities|\p{L}*rohstoff\p{L}*)(?![\p{L}\p{N}])/iu;
+
+const FUND_ASSET_CLASSES: ReadonlySet<AssetClass> = new Set(["etf", "fund"]);
+
+const NON_EQUITY_FUND_KINDS = "Renten-, Geldmarkt-, Misch-, Immobilien- oder Rohstofffonds";
+
+export function fundNameHint(name: string): string | null {
+  return NON_EQUITY_FUND_WORD.exec(name)?.[0] ?? null;
+}
+
+function fundTypeNameHint(position: TaxPosition): string | null {
+  return FUND_ASSET_CLASSES.has(position.assetClass) ? fundNameHint(position.name) : null;
+}
+
 export function defaultFundType(position: TaxPosition): FundType | null {
+  if (fundTypeNameHint(position) !== null) return null;
   return DEFAULT_FUND_TYPES[position.assetClass];
+}
+
+export function fundTypeMissingText(position: TaxPosition): string {
+  const hint = fundTypeNameHint(position);
+  if (hint !== null) {
+    return `${FUND_TYPE_MISSING_LABEL}: Der Export führt diese Position als Fonds, ihr Name enthält aber „${hint}“ und deutet damit auf einen ${NON_EQUITY_FUND_KINDS} hin. Bis Sie den Fondstyp wählen, wird nichts geschätzt, denn eine falsche Teilfreistellung verfälscht die Steuer. Maßgeblich ist die Einstufung in den Anlagebedingungen des Fonds; Renten-, Geldmarkt- und Rohstofffonds ohne Aktienquote sind „${FUND_TYPE_LABELS.other}“.`;
+  }
+  return `${FUND_TYPE_MISSING_LABEL}: Der Export nennt für diese Position keine Assetklasse, aus der sich der Fondstyp ergibt. Bis Sie den Fondstyp wählen, wird nichts geschätzt, denn eine falsche Teilfreistellung verfälscht die Steuer. Für Aktien, Anleihen und Derivate wählen Sie „${FUND_TYPE_LABELS.none}“.`;
+}
+
+export function fundTypeMissingPdfText(position: TaxPosition): string {
+  const hint = fundTypeNameHint(position);
+  const reason =
+    hint === null
+      ? "Der Export nennt keine Assetklasse, aus der sich der Fondstyp ergibt"
+      : `Der Name enthält „${hint}“ und deutet auf einen ${NON_EQUITY_FUND_KINDS} hin`;
+  return `Keine Schätzung: Fondstyp nicht gewählt. ${reason}; bitte im Steuerreiter den Fondstyp wählen.`;
 }
 
 export function defaultPositionSettings(position: TaxPosition): PositionSettings {
@@ -237,7 +270,7 @@ export const TAX_METHOD_NOTES = [
   "Basisertrag = Stück × Kurs am 01.01. × Basiszins × 0,7. Bei Kauf im Jahr wird die Vorabpauschale um 1/12 je vollen Monat vor dem Kaufmonat gekürzt (§ 18 Abs. 2 InvStG).",
   "Vorabpauschale = Basisertrag abzüglich der Ausschüttungen des Jahres (brutto, vor Steuerabzug, § 2 Abs. 11 InvStG), höchstens der Wertzuwachs (Kurs 31.12. minus Kurs 01.01.) × Stück, nie unter 0. Ausschüttungen zählen je Anteil für die Anteile, die am Zahltag im Bestand waren; ohne Bestand am 31.12. fällt keine Vorabpauschale an.",
   "Steuerpflichtig = Vorabpauschale × (1 − Teilfreistellung). Steuer = 26,375 % (Kapitalertragsteuer plus Solidaritätszuschlag), ohne Kirchensteuer.",
-  "Der Fondstyp bestimmt die Teilfreistellung (§ 20 InvStG). Vorbelegt ist er nur, wenn die Assetklasse im Export ihn erkennen lässt: Aktie, Anleihe, Krypto und Derivat (Zertifikat, Optionsschein, Hebelprodukt) als kein Fonds, ETF und Fonds als Aktienfonds. Ohne Assetklasse, etwa im Scalable-Export, und bei der Assetklasse „Cash“ steht dort „Bitte wählen“, und für die Position wird nichts geschätzt, bis Sie den Fondstyp wählen.",
+  "Der Fondstyp bestimmt die Teilfreistellung (§ 20 InvStG). Vorbelegt ist er nur, wenn die Assetklasse im Export ihn erkennen lässt: Aktie, Anleihe, Krypto und Derivat (Zertifikat, Optionsschein, Hebelprodukt) als kein Fonds, ETF und Fonds als Aktienfonds. Ohne Assetklasse, etwa im Scalable-Export, bei der Assetklasse „Cash“ und bei ETF und Fonds, deren Name auf einen Renten-, Geldmarkt-, Misch-, Immobilien- oder Rohstofffonds hindeutet (etwa „Bond“, „Anleihen“, „Geldmarkt“, „Multi-Asset“, „Immobilien“, „Commodity“), steht dort „Bitte wählen“, und für die Position wird nichts geschätzt, bis Sie den Fondstyp wählen.",
   "Veräußerungsgewinn nach FIFO. Werden Fondsanteile aus einem Vorjahr verkauft, können die für diese Anteile bereits angesetzten Vorabpauschalen eingetragen werden; sie mindern den Gewinn in voller Höhe, ohne Teilfreistellung (§ 19 Abs. 1 Satz 3 und 4 InvStG). Ohne Eingabe wird nichts abgezogen. Bei Positionen ohne vorbelegten Fondstyp erscheint das Feld, sobald ein Fondstyp gewählt ist.",
   "Der Sparerpauschbetrag (1.000 € bzw. 2.000 €) und Verlusttöpfe sind nicht berücksichtigt.",
   "Die Kurse am 01.01. und 31.12. stehen nicht im Export. Vorbelegt ist für den 01.01. der letzte Kurs aus dem Export bis zum 31.12. des Vorjahres, für den 31.12. der letzte Kurs bis zum Ende des Steuerjahres; solche Werte sind vorläufig. Fehlt ein Kurs oder stammen beide aus derselben Buchung, wird nichts geschätzt. Eingetragene Kurse gelten nur für das gewählte Steuerjahr, der Fondstyp gilt für alle Jahre. Für eine belastbare Schätzung die Rücknahmepreise der Fondsgesellschaft eintragen.",
