@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { PortfolioTransition } from "@/components/site/PortfolioTransition";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SITE_NAME, siteUrl } from "@/lib/site";
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {children}
         </main>
         <SiteFooter />
+        <PortfolioTransition />
       </body>
     </html>
   );

@@ -962,6 +962,7 @@ Umsetzung (gleich in K1, K2 und K3):
 - Datenschutzerklärung, Abschnitt 6: nennt jetzt auch den Link auf die Website mirkandeniz.de. Stand der Rechtstexte 01.11.2026. Die Seite lädt und überträgt nichts Neues.
 - Die Fußzeile des PDF nennt die neue Adresse `depotdoktor.mirkandeniz.de/projects/depotdoktor`.
 - Kontaktadresse in Impressum und Datenschutzerklärung seit 01.11.2026 `guenkaya@mirkandeniz.de` statt der privaten Gmail-Adresse (Entscheidung des Autors vom 01.11.2026, wie auf mirkandeniz.de; gleich in K1 bis K3); der Abschnitt „Kontakt per E-Mail“ der Datenschutzerklärung nennt IONOS SE als Anbieter des Postfachs (Auftragsverarbeitung nach Art. 28 DSGVO).
+- Überleitung (Wunsch des Autors vom 01.11.2026, Gegenstück zu „Live ansehen“ auf mirkandeniz.de): Links zu mirkandeniz.de und zu den Schwesterprojekten zeigen 560 ms lang einen Navy-Vorhang mit „Zurück zur Website · Mirkan Deniz“ oder „Weiter zum Projekt · <Name>“, dann folgt der echte Klick auf den Link (so gilt `rel="noopener noreferrer"` weiter). Keine Überleitung bei reduzierter Bewegung, bei Strg, Cmd, Umschalt, Alt oder mittlerer Maustaste. `components/site/PortfolioTransition.tsx` und `transition.ts`, gleich in K1 bis K3. Die Seite lädt und überträgt dadurch nichts Neues.
 
 Voraussetzung vor dem Merge: Domain im Vercel-Projekt hinzugefügt, CNAME bei IONOS gesetzt, Vercel zeigt „Valid Configuration“.
 
@@ -971,6 +972,6 @@ Prüfung am 01.11.2026:
 |---|---|
 | `pnpm typecheck` (einschließlich E2E-Dateien) | grün |
 | `pnpm lint` (alle sechs Pakete) | grün |
-| `pnpm test` | 292 Tests grün (csv 50, pdf 2, web 240); neu sind Tests zu Rückweg und alten Hosts, entfallen ist der Test zur Startseiten-Beschreibung |
+| `pnpm test` | 293 Tests grün (csv 50, pdf 2, web 241); neu sind Tests zu Rückweg, alten Hosts und dem Ziel der Überleitung, entfallen ist der Test zur Startseiten-Beschreibung |
 | `pnpm build` | grün, alle Routen statisch, `/` als Weiterleitung |
-| `pnpm test:e2e` mit `CI=true` | 32 Tests grün (`depotdoktor.spec.ts` 17, `site.spec.ts` 15), darin Weiterleitung von `/` und vom alten Host (per `Host`-Kopfzeile), Kopf- und Fußlinks, Kontaktadresse und IONOS-Hinweis auf den Rechtsseiten, axe-core ohne Verstöße |
+| `pnpm test:e2e` mit `CI=true` | 34 Tests grün (`depotdoktor.spec.ts` 17, `site.spec.ts` 17), darin Weiterleitung von `/` und vom alten Host (per `Host`-Kopfzeile), Kopf- und Fußlinks, Kontaktadresse und IONOS-Hinweis auf den Rechtsseiten, die Überleitung zu mirkandeniz.de und zu KontoKlar (mit Attrappen beider Adressen; synthetische Klicks mit Zusatztaste und mit reduzierter Bewegung werden nicht abgefangen), axe-core ohne Verstöße |
