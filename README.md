@@ -5,7 +5,7 @@ Clientseitiger Depot-Steuer- und Performance-Analyzer für deutsche Broker-Expor
 [![CI](https://github.com/mirkan-morgenfels-ai/depotdoktor/actions/workflows/ci.yml/badge.svg)](https://github.com/mirkan-morgenfels-ai/depotdoktor/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 
-Live-Demo: https://depotdoktor.vercel.app/projects/depotdoktor
+Live-Demo: https://depotdoktor.mirkandeniz.de/projects/depotdoktor (die frühere Adresse depotdoktor.vercel.app leitet dorthin weiter). Werdegang und alle Projekte: https://mirkandeniz.de
 
 **English summary.** DepotDoktor is a browser-only portfolio analyzer for German brokerage CSV exports (Trade Republic and Scalable Capital, more planned). It computes the time-weighted return (TTWROR), the money-weighted return (IRR via Newton's method), volatility, maximum drawdown and asset allocation, and it estimates German fund taxation (Vorabpauschale, Teilfreistellung, FIFO). All computation runs client-side; no file content leaves the browser. Parsers are tested on synthetic fixtures; verification against real broker exports is pending. Built with Next.js and TypeScript, tested with Vitest and Playwright.
 
@@ -108,7 +108,7 @@ pnpm install
 pnpm --filter web dev
 ```
 
-Danach ist die Seite unter http://localhost:3000/projects/depotdoktor erreichbar. Umgebungsvariablen sind nicht nötig; `NEXT_PUBLIC_SITE_URL` überschreibt bei Bedarf die öffentliche Adresse für Metadaten (Standard: https://depotdoktor.vercel.app).
+Danach ist die Seite unter http://localhost:3000/projects/depotdoktor erreichbar. Umgebungsvariablen sind nicht nötig; `NEXT_PUBLIC_SITE_URL` überschreibt bei Bedarf die öffentliche Adresse für Metadaten (Standard: https://depotdoktor.mirkandeniz.de).
 
 ## Tests
 
@@ -119,7 +119,7 @@ pnpm test:e2e
 
 `pnpm test` führt die Unit-Tests in `packages/csv`, `packages/pdf` und `apps/web` aus. `pnpm test:e2e` startet den Dev-Server (mit `CI=true` nach `pnpm build` den Produktionsserver, wie in der CI) und lädt die Testdateien im Browser. Der Port ist 3000, über `PORT` wählbar (z. B. `PORT=3101`); ohne installierte Playwright-Browser kann ein vorhandenes Chromium über `PLAYWRIGHT_CHROMIUM_PATH=/pfad/zu/chromium` angegeben werden.
 
-Stand 23.10.2026 (nach der Vorbelegung des Fondstyps nach dem Fondsnamen): 291 Unit-Tests (csv 50, pdf 2, web 239) und 31 Playwright-Tests, alle grün. Der frühere offene Test (`todo`) für Fall D ist seit 08.10.2026 ein echter Test gegen das BMF-Beispiel Rz. 18.11, siehe [docs/verifikation.md](docs/verifikation.md).
+Stand 01.11.2026 (nach der Anbindung an mirkandeniz.de): 292 Unit-Tests (csv 50, pdf 2, web 240) und 32 Playwright-Tests, alle grün. Der frühere offene Test (`todo`) für Fall D ist seit 08.10.2026 ein echter Test gegen das BMF-Beispiel Rz. 18.11, siehe [docs/verifikation.md](docs/verifikation.md).
 
 Unit-Tests decken TTWROR (auch mit Kaufgebühr des ersten Kaufs und Kauf nach Vollverkauf), IRR (einschließlich Divergenz-Fallback), Volatilität, Max Drawdown (auch nach Vollverkauf), die Bewertungspunkte an Depotbuchungen, Vorabpauschale (Normalfall, Wertzuwachs unter Basisertrag, Verlustjahr, unterjähriger Kauf mit Zwölftelung der Vorabpauschale, Bruttoausschüttungen je Anteil zum Zahltag, kein Bestand am 31.12.), die Rechenbeispiele des BMF-Schreibens vom 21.05.2019 (Rz. 18.3, 18.4 und 18.11), die Vorbelegung des Steuerjahres, Positionen ohne Assetklasse („Fondstyp wählen“), die Vorbelegung des Fondstyps nach Assetklasse (Derivate „Kein Fonds“, Cash ohne Vorbelegung, Ansicht und PDF), die Kursvorbelegung je Steuerjahr mit „vorläufig“ und „Kurse eintragen“, FIFO mit angesetzten Vorabpauschalen und mit Steuerabzug beim Verkauf, Kurseingaben je Steuerjahr mit Fondstyp je Position, die Dateityp-Erkennung (PDF, ZIP, Binärdaten, Windows-1252, UTF-16 mit BOM), den CSV-Export (BOM, CRLF, Quoting, Dezimalkomma, Vorzeichen, Injektionsschutz, Rücklesen mit Papa Parse) und den PDF-Report (zwölf Kennzahlen, übersprungene Zeilen, Hinweise, Fußzeile, Disclaimer auf jeder Seite) ab, jeweils mit von Hand gerechneten Erwartungswerten. Die E2E-Tests laufen mit fest eingestelltem Datum (08.10.2026), laden die Testdateien beider Broker hoch, auch als UTF-16-Datei, prüfen Kennzahlen und Diagramme in allen Reitern, das vorbelegte Steuerjahr, die Fondstypwahl bei Positionen ohne Assetklasse (Name, Beschreibung, `aria-invalid`), ein Derivat aus dem Trade-Republic-Export mit vorbelegtem „Kein Fonds“, den Hinweis „nur PRIME+“ beim Exportweg von Scalable Capital, die Eingabe angesetzter Vorabpauschalen beim Verkauf (ohne gewählten Fondstyp den Hinweis mit „Zum Fondstyp“), den Wechsel des Steuerjahres mit Kursen je Jahr, den PDF- und CSV-Download (CSV mit BOM, CRLF und 16 Spalten je Zeile), die Fehlermeldung bei unbekanntem Format, die Ablehnung von PDF- und Excel-Dateien, Startseite, Navigation, Rechtsseiten, 404-Seite, Metadaten, `robots.txt` und Sitemap, die mobile Darstellung, axe-core bei 390, 768 und 1280 px und dass während der Auswertung keine Anfrage mit Dateiinhalten die Seite verlässt.
 
@@ -179,8 +179,10 @@ DepotDoktor liefert allgemeine Informationen und stellt keine Anlage- oder Steue
 
 ## Weitere Projekte
 
-- **KontoKlar**: Kategorisiert Bankumsätze aus CSV-Exporten und zeigt, wohin das Geld geht. [Live-Demo](https://kontoklar-eight.vercel.app/projects/kontoklar) · [Quellcode](https://github.com/mirkan-morgenfels-ai/kontoklar)
-- **NetzRadar**: Anomalie-Erkennung in Transaktionsnetzwerken: klassische Baseline gegen Graph Neural Networks, mit zeitlichem Split und PR-AUC. [Live-Demo](https://netzradar.vercel.app/projects/netzradar) · [Quellcode](https://github.com/mirkan-morgenfels-ai/netzradar)
+Alle Projekte, Werdegang und Kontakt stehen auf [mirkandeniz.de](https://mirkandeniz.de/projekte). Kopf und Fuß jeder Projektseite führen dorthin zurück.
+
+- **KontoKlar**: Kategorisiert Bankumsätze aus CSV-Exporten und zeigt, wohin das Geld geht. [Live-Demo](https://kontoklar.mirkandeniz.de/projects/kontoklar) · [Quellcode](https://github.com/mirkan-morgenfels-ai/kontoklar)
+- **NetzRadar**: Anomalie-Erkennung in Transaktionsnetzwerken: klassische Baseline gegen Graph Neural Networks, mit zeitlichem Split und PR-AUC. [Live-Demo](https://netzradar.mirkandeniz.de/projects/netzradar) · [Quellcode](https://github.com/mirkan-morgenfels-ai/netzradar)
 
 ## Lizenz
 

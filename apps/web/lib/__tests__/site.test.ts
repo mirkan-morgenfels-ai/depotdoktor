@@ -2,10 +2,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_SITE_URL,
   GITHUB_PROFILE_URL,
-  HOME_DESCRIPTION,
+  LEGACY_HOSTS,
   LEGAL_LINKS,
   LICENSE_URL,
   NAV_LINKS,
+  PORTFOLIO_LABEL,
+  PORTFOLIO_PROJECTS_URL,
+  PORTFOLIO_URL,
+  PROJECT_PATH,
   PROJECTS,
   REPO_URL,
   SITEMAP_PATHS,
@@ -23,14 +27,16 @@ describe("PROJECTS", () => {
     expect(PROJECTS.map((project) => project.topic)).toEqual(["Finanzdaten", "Maschinelles Lernen", "Graph-ML"]);
   });
 
-  it("links DepotDoktor internally and the other projects over https", () => {
+  it("links DepotDoktor internally and the other projects on their mirkandeniz.de subdomains", () => {
     const [depotdoktor, ...others] = PROJECTS;
     expect(depotdoktor?.href).toBe("/projects/depotdoktor");
+    expect(depotdoktor?.href).toBe(PROJECT_PATH);
     expect(depotdoktor?.external).toBe(false);
-    for (const project of others) {
-      expect(project.external).toBe(true);
-      expect(new URL(project.href).protocol).toBe("https:");
-    }
+    expect(others.map((project) => project.href)).toEqual([
+      "https://kontoklar.mirkandeniz.de/projects/kontoklar",
+      "https://netzradar.mirkandeniz.de/projects/netzradar",
+    ]);
+    for (const project of others) expect(project.external).toBe(true);
   });
 
   it("points every project to its public repository", () => {
@@ -50,27 +56,28 @@ describe("PROJECTS", () => {
     );
   });
 
-  it("uses the same start page description as the sibling sites", () => {
-    expect(HOME_DESCRIPTION).toBe(
-      "Drei Portfolio-Projekte zu Finanzdaten, maschinellem Lernen und Graph-ML: DepotDoktor, KontoKlar und NetzRadar, jeweils mit öffentlichem Quellcode auf GitHub.",
-    );
-  });
 });
 
 describe("navigation", () => {
-  it("offers start, the three projects and the GitHub profile in the main navigation", () => {
-    expect(NAV_LINKS.map((link) => link.label)).toEqual(["Start", "DepotDoktor", "KontoKlar", "NetzRadar", "GitHub"]);
-    expect(NAV_LINKS.map((link) => link.external)).toEqual([false, false, true, true, true]);
-    expect(NAV_LINKS.at(-1)?.href).toBe(GITHUB_PROFILE_URL);
+  it("offers the three projects and the project overview on mirkandeniz.de in the main navigation", () => {
+    expect(NAV_LINKS.map((link) => link.label)).toEqual(["DepotDoktor", "KontoKlar", "NetzRadar", "Alle Projekte"]);
+    expect(NAV_LINKS.map((link) => link.external)).toEqual([false, true, true, true]);
+    expect(NAV_LINKS.at(-1)?.href).toBe("https://mirkandeniz.de/projekte");
+    expect(PORTFOLIO_PROJECTS_URL).toBe(`${PORTFOLIO_URL}/projekte`);
     expect(GITHUB_PROFILE_URL).toBe("https://github.com/mirkan-morgenfels-ai");
+  });
+
+  it("leads back to the website mirkandeniz.de", () => {
+    expect(PORTFOLIO_URL).toBe("https://mirkandeniz.de");
+    expect(PORTFOLIO_LABEL).toBe(new URL(PORTFOLIO_URL).host);
   });
 
   it("offers the three legal pages", () => {
     expect(LEGAL_LINKS.map((link) => link.href)).toEqual(["/impressum", "/datenschutz", "/nutzungsbedingungen"]);
   });
 
-  it("lists the five public routes for the sitemap", () => {
-    expect(SITEMAP_PATHS).toEqual(["/", "/projects/depotdoktor", "/impressum", "/datenschutz", "/nutzungsbedingungen"]);
+  it("lists the four public routes for the sitemap, without the redirecting start address", () => {
+    expect(SITEMAP_PATHS).toEqual(["/projects/depotdoktor", "/impressum", "/datenschutz", "/nutzungsbedingungen"]);
   });
 });
 
@@ -88,9 +95,14 @@ describe("siteUrl", () => {
   });
 
   it("falls back to the live address for an empty value", () => {
-    expect(DEFAULT_SITE_URL).toBe("https://depotdoktor.vercel.app");
-    expect(siteUrl("").href).toBe("https://depotdoktor.vercel.app/");
-    expect(siteUrl("   ").href).toBe("https://depotdoktor.vercel.app/");
+    expect(DEFAULT_SITE_URL).toBe("https://depotdoktor.mirkandeniz.de");
+    expect(siteUrl("").href).toBe("https://depotdoktor.mirkandeniz.de/");
+    expect(siteUrl("   ").href).toBe("https://depotdoktor.mirkandeniz.de/");
+  });
+
+  it("redirects only the two former Vercel addresses", () => {
+    expect(LEGACY_HOSTS).toEqual(["depotdoktor.vercel.app", "ai-project-1-web.vercel.app"]);
+    expect(LEGACY_HOSTS).not.toContain(siteUrl("").host);
   });
 
   it("uses a configured value", () => {
@@ -107,8 +119,8 @@ describe("siteUrl", () => {
   });
 
   it("shows the project address without protocol", () => {
-    expect(projectDisplayUrl("depotdoktor", siteUrl(""))).toBe("depotdoktor.vercel.app/projects/depotdoktor");
-    expect(projectDisplayUrl("netzradar", siteUrl(""))).toBe("netzradar.vercel.app/projects/netzradar");
+    expect(projectDisplayUrl("depotdoktor", siteUrl(""))).toBe("depotdoktor.mirkandeniz.de/projects/depotdoktor");
+    expect(projectDisplayUrl("netzradar", siteUrl(""))).toBe("netzradar.mirkandeniz.de/projects/netzradar");
     expect(() => projectDisplayUrl("unbekannt")).toThrow();
   });
 });

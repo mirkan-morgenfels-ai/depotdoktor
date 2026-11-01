@@ -9,87 +9,78 @@ const LEGAL_PAGES = [
   { path: "/datenschutz", heading: "Datenschutzerklärung" },
   { path: "/nutzungsbedingungen", heading: "Nutzungsbedingungen" },
 ];
-const LEGAL_UPDATED = "07.10.2026";
+const LEGAL_UPDATED = "01.11.2026";
 const REPO_BASE = "https://github.com/mirkan-morgenfels-ai";
 const DEPOTDOKTOR_REPO = `${REPO_BASE}/depotdoktor`;
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://depotdoktor.vercel.app").replace(/\/+$/, "");
-const HOME_TITLE = "Projekte · Mirkan Deniz Günkaya";
-const HOME_DESCRIPTION =
-  "Drei Portfolio-Projekte zu Finanzdaten, maschinellem Lernen und Graph-ML: DepotDoktor, KontoKlar und NetzRadar, jeweils mit öffentlichem Quellcode auf GitHub.";
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://depotdoktor.mirkandeniz.de").replace(/\/+$/, "");
+const LEGACY_HOST = "depotdoktor.vercel.app";
+const PORTFOLIO_URL = "https://mirkandeniz.de";
 const PROJECT_TITLE = "DepotDoktor – Depot-Steuer- und Performance-Analyzer";
-const PUBLIC_PATHS = ["/", "/projects/depotdoktor", ...LEGAL_PAGES.map((legal) => legal.path)];
+const PUBLIC_PATHS = ["/projects/depotdoktor", ...LEGAL_PAGES.map((legal) => legal.path)];
 const TABS = ["Performance", "Allokation", "Steuer", "Transaktionen"];
 
 async function metaContent(page: Page, selector: string): Promise<string | null> {
   return page.locator(selector).first().getAttribute("content");
 }
 
-test("start page lists the three projects", async ({ page }) => {
+test("start address opens DepotDoktor directly", async ({ page, request }) => {
+  const response = await request.get("/", { maxRedirects: 0 });
+  expect(response.status()).toBe(308);
+  expect(response.headers()["location"]).toBe("/projects/depotdoktor");
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Drei Projekte zu Finanzdaten, maschinellem Lernen und Graph-ML" }),
-  ).toBeVisible();
-  await expect(page.getByRole("main").getByRole("heading", { level: 2, name: "Projekte", exact: true })).toBeVisible();
-  await expect(page.getByTestId(/^project-/)).toHaveCount(3);
-  await expect(page.getByRole("main")).not.toContainText("in Arbeit");
-  await expect(page.getByRole("main")).not.toContainText("noch nicht veröffentlicht");
-
-  await expect(page.getByTestId("project-depotdoktor").getByRole("link", { name: /^Live ansehen/ })).toHaveAttribute(
-    "href",
-    "/projects/depotdoktor",
-  );
-
-  for (const [slug, href] of [
-    ["kontoklar", "https://kontoklar-eight.vercel.app/projects/kontoklar"],
-    ["netzradar", "https://netzradar.vercel.app/projects/netzradar"],
-  ] as const) {
-    const link = page.getByTestId(`project-${slug}`).getByRole("link", { name: /^Live ansehen/ });
-    await expect(link).toHaveAttribute("href", href);
-    await expect(link).toHaveAttribute("rel", "noopener noreferrer");
-    await expect(link).not.toHaveAttribute("target", /.+/);
-    await expect(link).toContainText("(externe Seite)");
-  }
-
-  for (const slug of ["depotdoktor", "kontoklar", "netzradar"]) {
-    const repo = page.getByTestId(`project-${slug}`).getByRole("link", { name: /^Quellcode/ });
-    await expect(repo).toHaveAttribute("href", new RegExp(`^${REPO_BASE}/${slug}$`));
-    await expect(repo).toHaveAttribute("rel", "noopener noreferrer");
-    await expect(repo).not.toHaveAttribute("target", /.+/);
-  }
-  await expect(page.locator("a[target]")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/projects\/depotdoktor$/);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });
 
-test("main navigation and skip link are present", async ({ page }) => {
+test("the former Vercel address forwards to the subdomain of mirkandeniz.de", async ({ request }) => {
+  test.skip(new URL(SITE_URL).host === LEGACY_HOST, "NEXT_PUBLIC_SITE_URL zeigt noch auf die alte Adresse");
+  const page = await request.get("/projects/depotdoktor?quelle=alt", { headers: { host: LEGACY_HOST }, maxRedirects: 0 });
+  expect(page.status()).toBe(308);
+  expect(page.headers()["location"]).toBe(`${SITE_URL}/projects/depotdoktor?quelle=alt`);
+  const root = await request.get("/", { headers: { host: LEGACY_HOST }, maxRedirects: 0 });
+  expect(root.status()).toBe(308);
+  expect(root.headers()["location"]).toBe(SITE_URL);
+});
+
+test("main navigation, way back to mirkandeniz.de and skip link are present", async ({ page }) => {
   await page.goto("/projects/depotdoktor");
   const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
   const links = nav.getByRole("list").getByRole("link");
-  await expect(links).toHaveCount(5);
-  await expect(links.nth(0)).toHaveText("Start");
-  await expect(links.nth(1)).toHaveText("DepotDoktor");
-  await expect(links.nth(2)).toHaveAccessibleName("KontoKlar (externe Seite)");
-  await expect(links.nth(3)).toHaveAccessibleName("NetzRadar (externe Seite)");
-  await expect(links.nth(4)).toHaveAccessibleName("GitHub (externe Seite)");
-  await expect(links.nth(4)).toHaveAttribute("href", REPO_BASE);
-  for (const index of [2, 3, 4]) {
-    await expect(links.nth(index)).toHaveAttribute("href", /^https:\/\//);
+  await expect(links).toHaveCount(4);
+  await expect(links.nth(0)).toHaveText("DepotDoktor");
+  await expect(links.nth(1)).toHaveAccessibleName("KontoKlar (externe Seite)");
+  await expect(links.nth(2)).toHaveAccessibleName("NetzRadar (externe Seite)");
+  await expect(links.nth(3)).toHaveAccessibleName("Alle Projekte (externe Seite)");
+  await expect(links.nth(1)).toHaveAttribute("href", "https://kontoklar.mirkandeniz.de/projects/kontoklar");
+  await expect(links.nth(2)).toHaveAttribute("href", "https://netzradar.mirkandeniz.de/projects/netzradar");
+  await expect(links.nth(3)).toHaveAttribute("href", `${PORTFOLIO_URL}/projekte`);
+  for (const index of [1, 2, 3]) {
     await expect(links.nth(index)).toHaveAttribute("rel", "noopener noreferrer");
     await expect(links.nth(index)).not.toHaveAttribute("target", /.+/);
   }
-  await expect(links.nth(1)).toHaveAttribute("aria-current", "page");
-  await expect(links.nth(0)).not.toHaveAttribute("aria-current", /.+/);
+  await expect(links.nth(0)).toHaveAttribute("aria-current", "page");
+
+  const home = page.locator("header").getByTestId("portfolio-link");
+  await expect(home).toHaveAttribute("href", PORTFOLIO_URL);
+  await expect(home).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(home).not.toHaveAttribute("target", /.+/);
+  await expect(home).toHaveAccessibleName(/^Mirkan Deniz.*\(externe Seite\)$/);
+  await expect(home).toContainText("mirkandeniz.de");
+
   await expect(page.locator("a.skip-link")).toHaveAttribute("href", "#main");
   await expect(nav.getByRole("link", { name: /Impressum|Datenschutz|Nutzungsbedingungen/ })).toHaveCount(0);
 
   const legalNav = page.getByRole("navigation", { name: "Rechtliches" });
   await expect(legalNav.getByRole("link")).toHaveText(["Impressum", "Datenschutz", "Nutzungsbedingungen"]);
-
-  await page.goto("/");
-  await expect(nav.getByRole("link", { name: "Start" })).toHaveAttribute("aria-current", "page");
-  await expect(nav.getByRole("link", { name: "DepotDoktor", exact: true })).not.toHaveAttribute("aria-current", /.+/);
 });
 
-test("footer and project page link the public repository", async ({ page }) => {
-  await page.goto("/");
+test("footer and project page link the public repository and mirkandeniz.de", async ({ page }) => {
+  await page.goto("/projects/depotdoktor");
+  const portfolio = page.getByTestId("footer-portfolio-link");
+  await expect(portfolio).toHaveAttribute("href", PORTFOLIO_URL);
+  await expect(portfolio).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(portfolio).toHaveAccessibleName("mirkandeniz.de (externe Seite)");
+  await expect(page.locator("footer").getByTestId("portfolio-link")).toHaveAttribute("href", PORTFOLIO_URL);
   const footerLink = page.getByTestId("footer-repo-link");
   await expect(footerLink).toHaveAttribute("href", DEPOTDOKTOR_REPO);
   await expect(footerLink).toHaveAttribute("rel", "noopener noreferrer");
@@ -121,7 +112,7 @@ test("footer and project page link the public repository", async ({ page }) => {
 
   await page.goto("/datenschutz");
   const privacy = page.getByRole("main");
-  await expect(privacy).toContainText("Diese Seite verlinkt auf die Projekte KontoKlar und NetzRadar");
+  await expect(privacy).toContainText("Diese Seite verlinkt auf die Website mirkandeniz.de und die Projekte KontoKlar und NetzRadar");
   await expect(privacy).toContainText("Quellcode-Repositories bei GitHub (GitHub, Inc., USA)");
   await expect(privacy.getByRole("link", { name: /^Datenschutzerklärung von Vercel/ })).toHaveAttribute(
     "href",
@@ -155,8 +146,10 @@ test("unknown paths answer 404 with a noindex title", async ({ page }) => {
   await expect(page).toHaveTitle("Seite nicht gefunden · DepotDoktor");
   await expect(page.getByRole("navigation", { name: "Hauptnavigation" })).toBeVisible();
   await expect(page.locator("footer")).toBeVisible();
-  await expect(page.getByRole("main").getByRole("link", { name: "Zur Startseite" })).toHaveAttribute("href", "/");
   await expect(page.getByRole("main").getByRole("link", { name: "Zu DepotDoktor" })).toHaveAttribute("href", "/projects/depotdoktor");
+  const website = page.getByRole("main").getByRole("link", { name: "Zur Website mirkandeniz.de (externe Seite)" });
+  await expect(website).toHaveAttribute("href", PORTFOLIO_URL);
+  await expect(website).toHaveAttribute("rel", "noopener noreferrer");
   await expect(page.locator("body")).not.toContainText("This page could not be found");
   const robots = await page.locator('meta[name="robots"]').evaluateAll((metas) =>
     metas.map((meta) => meta.getAttribute("content") ?? ""),
@@ -170,10 +163,6 @@ test("pages carry canonical links, link previews and distinct titles", async ({ 
   for (const path of PUBLIC_PATHS) {
     await page.goto(path);
     titles[path] = await page.title();
-    if (path === "/") {
-      expect(await metaContent(page, 'meta[name="description"]')).toBe(HOME_DESCRIPTION);
-      expect(await metaContent(page, 'meta[property="og:description"]')).toBe(HOME_DESCRIPTION);
-    }
     const canonical = await page.locator('link[rel="canonical"]').getAttribute("href");
     expect(canonical, path).not.toBeNull();
     expect(new URL(canonical ?? "").origin, path).toBe(SITE_URL);
@@ -191,7 +180,6 @@ test("pages carry canonical links, link previews and distinct titles", async ({ 
     expect(local.status(), path).toBe(200);
     expect(local.headers()["content-type"], path).toContain("image/png");
   }
-  expect(titles["/"]).toBe(HOME_TITLE);
   expect(titles["/projects/depotdoktor"]).toBe(PROJECT_TITLE);
   expect(titles["/impressum"]).toBe("Impressum · DepotDoktor");
   expect(titles["/datenschutz"]).toBe("Datenschutzerklärung · DepotDoktor");

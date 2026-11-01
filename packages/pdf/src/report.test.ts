@@ -49,7 +49,7 @@ const sample: ReportPdfData = {
   taxMethod: ["Basisertrag = Wert am Jahresanfang × Basiszins × 0,7."],
   notes: ["Bewertung ohne Tageskurse.", "Einlesen: Zeile 7 übersprungen (Status Pending)."],
   disclaimer: "Keine Anlage- oder Steuerberatung. Alle Angaben ohne Gewähr.",
-  footerLine: "Erstellt mit DepotDoktor · depotdoktor.vercel.app/projects/depotdoktor",
+  footerLine: "Erstellt mit DepotDoktor · depotdoktor.mirkandeniz.de/projects/depotdoktor",
 };
 
 describe("PDF-Report", () => {
@@ -68,7 +68,7 @@ describe("PDF-Report", () => {
     expect(result.text).toContain("IE00TEST0001");
     const disclaimerCount = result.text.split("Keine Anlage- oder Steuerberatung").length - 1;
     expect(disclaimerCount).toBe(3);
-    const footerCount = result.text.split("Erstellt mit DepotDoktor · depotdoktor.vercel.app/projects/depotdoktor").length - 1;
+    const footerCount = result.text.split("Erstellt mit DepotDoktor · depotdoktor.mirkandeniz.de/projects/depotdoktor").length - 1;
     expect(footerCount).toBe(3);
   });
 
