@@ -955,7 +955,7 @@ Entscheidungen des Autors vom 01.11.2026 (vorgelegt mit Empfehlung):
 
 Umsetzung (gleich in K1, K2 und K3):
 
-- Kopf: Monogramm „MD“ (Glyphenpfade wie auf mirkandeniz.de, `components/site/Monogram.tsx`), Wortmarke „Mirkan Deniz“ und darunter „← mirkandeniz.de“ als ein Link auf https://mirkandeniz.de; rechts DepotDoktor, KontoKlar, NetzRadar und „Alle Projekte“ (https://mirkandeniz.de/projekte). „Start“ und „GitHub“ entfallen in der Kopfzeile; der Quellcode bleibt in Hero, Projektseite und Fuß verlinkt.
+- Kopf: Monogramm „MD“ (Glyphenpfade wie auf mirkandeniz.de, `components/site/Monogram.tsx`), Wortmarke „Mirkan Deniz“ und darunter „← mirkandeniz.de“ als ein Link auf https://mirkandeniz.de/#start (mit der Sprungmarke zeigt die Website ihre Startanimation beim Zurückkommen nicht erneut; Fuß und 404-Seite ebenso); rechts DepotDoktor, KontoKlar, NetzRadar und „Alle Projekte“ (https://mirkandeniz.de/projekte). „Start“ und „GitHub“ entfallen in der Kopfzeile; der Quellcode bleibt in Hero, Projektseite und Fuß verlinkt.
 - Fuß: dasselbe Markenzeichen, dazu „Ein Projekt von Mirkan Deniz Günkaya. Werdegang, alle Projekte und Kontakt auf mirkandeniz.de.“
 - `next.config.ts`: `/` leitet dauerhaft (308) auf `/projects/depotdoktor`; Anfragen an die alten Hosts `depotdoktor.vercel.app` und `ai-project-1-web.vercel.app` leiten dauerhaft auf dieselbe Adresse unter `depotdoktor.mirkandeniz.de`. Vorschau-Adressen von Vercel sind nicht betroffen. Zeigt `NEXT_PUBLIC_SITE_URL` auf einen alten Host, entfällt dessen Regel.
 - Startseite mit `HomeHero` und `ProjectCards` entfernt, Sitemap ohne `/`; 404-Seite mit „Zu DepotDoktor“ und „Zur Website mirkandeniz.de“, Fehlerseite mit „Zu DepotDoktor“.

@@ -15,6 +15,7 @@ const DEPOTDOKTOR_REPO = `${REPO_BASE}/depotdoktor`;
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://depotdoktor.mirkandeniz.de").replace(/\/+$/, "");
 const LEGACY_HOST = "depotdoktor.vercel.app";
 const PORTFOLIO_URL = "https://mirkandeniz.de";
+const PORTFOLIO_HOME_URL = `${PORTFOLIO_URL}/#start`;
 const PROJECT_TITLE = "DepotDoktor – Depot-Steuer- und Performance-Analyzer";
 const PUBLIC_PATHS = ["/projects/depotdoktor", ...LEGAL_PAGES.map((legal) => legal.path)];
 const TABS = ["Performance", "Allokation", "Steuer", "Transaktionen"];
@@ -61,7 +62,7 @@ test("main navigation, way back to mirkandeniz.de and skip link are present", as
   await expect(links.nth(0)).toHaveAttribute("aria-current", "page");
 
   const home = page.locator("header").getByTestId("portfolio-link");
-  await expect(home).toHaveAttribute("href", PORTFOLIO_URL);
+  await expect(home).toHaveAttribute("href", PORTFOLIO_HOME_URL);
   await expect(home).toHaveAttribute("rel", "noopener noreferrer");
   await expect(home).not.toHaveAttribute("target", /.+/);
   await expect(home).toHaveAccessibleName(/^Mirkan Deniz.*\(externe Seite\)$/);
@@ -77,10 +78,10 @@ test("main navigation, way back to mirkandeniz.de and skip link are present", as
 test("footer and project page link the public repository and mirkandeniz.de", async ({ page }) => {
   await page.goto("/projects/depotdoktor");
   const portfolio = page.getByTestId("footer-portfolio-link");
-  await expect(portfolio).toHaveAttribute("href", PORTFOLIO_URL);
+  await expect(portfolio).toHaveAttribute("href", PORTFOLIO_HOME_URL);
   await expect(portfolio).toHaveAttribute("rel", "noopener noreferrer");
   await expect(portfolio).toHaveAccessibleName("mirkandeniz.de (externe Seite)");
-  await expect(page.locator("footer").getByTestId("portfolio-link")).toHaveAttribute("href", PORTFOLIO_URL);
+  await expect(page.locator("footer").getByTestId("portfolio-link")).toHaveAttribute("href", PORTFOLIO_HOME_URL);
   const footerLink = page.getByTestId("footer-repo-link");
   await expect(footerLink).toHaveAttribute("href", DEPOTDOKTOR_REPO);
   await expect(footerLink).toHaveAttribute("rel", "noopener noreferrer");
@@ -148,7 +149,7 @@ test("unknown paths answer 404 with a noindex title", async ({ page }) => {
   await expect(page.locator("footer")).toBeVisible();
   await expect(page.getByRole("main").getByRole("link", { name: "Zu DepotDoktor" })).toHaveAttribute("href", "/projects/depotdoktor");
   const website = page.getByRole("main").getByRole("link", { name: "Zur Website mirkandeniz.de (externe Seite)" });
-  await expect(website).toHaveAttribute("href", PORTFOLIO_URL);
+  await expect(website).toHaveAttribute("href", PORTFOLIO_HOME_URL);
   await expect(website).toHaveAttribute("rel", "noopener noreferrer");
   await expect(page.locator("body")).not.toContainText("This page could not be found");
   const robots = await page.locator('meta[name="robots"]').evaluateAll((metas) =>
