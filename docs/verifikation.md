@@ -961,6 +961,7 @@ Umsetzung (gleich in K1, K2 und K3):
 - Startseite mit `HomeHero` und `ProjectCards` entfernt, Sitemap ohne `/`; 404-Seite mit „Zu DepotDoktor“ und „Zur Website mirkandeniz.de“, Fehlerseite mit „Zu DepotDoktor“.
 - Datenschutzerklärung, Abschnitt 6: nennt jetzt auch den Link auf die Website mirkandeniz.de. Stand der Rechtstexte 01.11.2026. Die Seite lädt und überträgt nichts Neues.
 - Die Fußzeile des PDF nennt die neue Adresse `depotdoktor.mirkandeniz.de/projects/depotdoktor`.
+- Kontaktadresse in Impressum und Datenschutzerklärung seit 01.11.2026 `guenkaya@mirkandeniz.de` statt der privaten Gmail-Adresse (Entscheidung des Autors vom 01.11.2026, wie auf mirkandeniz.de; gleich in K1 bis K3); der Abschnitt „Kontakt per E-Mail“ der Datenschutzerklärung nennt IONOS SE als Anbieter des Postfachs (Auftragsverarbeitung nach Art. 28 DSGVO).
 
 Voraussetzung vor dem Merge: Domain im Vercel-Projekt hinzugefügt, CNAME bei IONOS gesetzt, Vercel zeigt „Valid Configuration“.
 
@@ -972,4 +973,4 @@ Prüfung am 01.11.2026:
 | `pnpm lint` (alle sechs Pakete) | grün |
 | `pnpm test` | 292 Tests grün (csv 50, pdf 2, web 240); neu sind Tests zu Rückweg und alten Hosts, entfallen ist der Test zur Startseiten-Beschreibung |
 | `pnpm build` | grün, alle Routen statisch, `/` als Weiterleitung |
-| `pnpm test:e2e` mit `CI=true` | 32 Tests grün (`depotdoktor.spec.ts` 17, `site.spec.ts` 15), darin Weiterleitung von `/` und vom alten Host (per `Host`-Kopfzeile), Kopf- und Fußlinks, axe-core ohne Verstöße |
+| `pnpm test:e2e` mit `CI=true` | 32 Tests grün (`depotdoktor.spec.ts` 17, `site.spec.ts` 15), darin Weiterleitung von `/` und vom alten Host (per `Host`-Kopfzeile), Kopf- und Fußlinks, Kontaktadresse und IONOS-Hinweis auf den Rechtsseiten, axe-core ohne Verstöße |
