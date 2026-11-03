@@ -180,7 +180,7 @@ DepotDoktor liefert allgemeine Informationen und stellt keine Anlage- oder Steue
 ## Weitere Projekte
 
 - **KontoKlar**: Kategorisiert Bankumsätze aus CSV-Exporten und zeigt, wohin das Geld geht. [Live-Demo](https://kontoklar-eight.vercel.app/projects/kontoklar) · [Quellcode](https://github.com/mirkan-morgenfels-ai/kontoklar)
-- **NetzRadar**: Anomalie-Erkennung in Transaktionsnetzwerken: klassische Baseline gegen Graph Neural Networks, mit zeitlichem Split und PR-AUC. [Live-Demo](https://netzradar.vercel.app/projects/netzradar) · [Quellcode](https://github.com/mirkan-morgenfels-ai/netzradar)
+- **NetzRadar**: Anomalie-Erkennung in Transaktionsnetzwerken: klassische Baselines und Gradient Boosting gegen Graph Neural Networks, mit zeitlichem Split und PR-AUC. [Live-Demo](https://netzradar.vercel.app/projects/netzradar) · [Quellcode](https://github.com/mirkan-morgenfels-ai/netzradar)
 
 ## Lizenz
 
