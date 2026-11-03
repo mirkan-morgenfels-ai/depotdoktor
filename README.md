@@ -181,8 +181,9 @@ DepotDoktor liefert allgemeine Informationen und stellt keine Anlage- oder Steue
 
 Alle Projekte, Werdegang und Kontakt stehen auf [mirkandeniz.de](https://mirkandeniz.de/projekte). Kopf und Fuß jeder Projektseite führen dorthin zurück.
 
-- **KontoKlar**: Kategorisiert Bankumsätze aus CSV-Exporten und zeigt, wohin das Geld geht. [Live-Demo](https://kontoklar.mirkandeniz.de/projects/kontoklar) · [Quellcode](https://github.com/mirkan-morgenfels-ai/kontoklar)
-- **NetzRadar**: Anomalie-Erkennung in Transaktionsnetzwerken: klassische Baseline gegen Graph Neural Networks, mit zeitlichem Split und PR-AUC. [Live-Demo](https://netzradar.mirkandeniz.de/projects/netzradar) · [Quellcode](https://github.com/mirkan-morgenfels-ai/netzradar)
+- **KontoKlar**: Kategorisiert Bankumsätze aus CSV-Exporten und zeigt, wohin das Geld geht.
+[Live-Demo](https://kontoklar.mirkandeniz.de/projects/kontoklar) · [Quellcode](https://github.com/mirkan-morgenfels-ai/kontoklar)
+- **NetzRadar**: Anomalie-Erkennung in Transaktionsnetzwerken: klassische Baselines und Gradient Boosting gegen Graph Neural Networks, mit zeitlichem Split und PR-AUC. [Live-Demo](https://netzradar.mirkandeniz.de/projects/netzradar) · [Quellcode](https://github.com/mirkan-morgenfels-ai/netzradar)
 
 ## Lizenz
 

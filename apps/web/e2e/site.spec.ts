@@ -127,6 +127,8 @@ for (const legal of LEGAL_PAGES) {
     await page.goto(legal.path);
     await expect(page.getByRole("heading", { level: 1, name: legal.heading })).toBeVisible();
     await expect(page.getByText(`Stand: ${LEGAL_UPDATED}`, { exact: true })).toBeVisible();
+    await expect(page.getByRole("main")).not.toContainText("Platzhalter");
+    await expect(page.getByRole("main")).not.toContainText(/[[\]]/);
   });
 }
 
