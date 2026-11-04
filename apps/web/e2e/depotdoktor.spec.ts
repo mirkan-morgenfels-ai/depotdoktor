@@ -776,9 +776,13 @@ test("Rechtsseiten sind erreichbar und verlinkt", async ({ page }) => {
   await expect(page.getByText("kein Angebot", { exact: false }).first()).toBeVisible();
   await page.goto("/impressum");
   await expect(page.getByRole("heading", { name: "Impressum", level: 1 })).toBeVisible();
-  await expect(page.getByText("mirkandeniz52@gmail.com").first()).toBeVisible();
+  await expect(page.getByText("guenkaya@mirkandeniz.de").first()).toBeVisible();
+  await expect(page.getByRole("main")).not.toContainText("gmail.com");
   await page.goto("/datenschutz");
   await expect(page.getByRole("heading", { name: "Datenschutzerklärung", level: 1 })).toBeVisible();
+  await expect(page.getByRole("main")).toContainText("guenkaya@mirkandeniz.de");
+  await expect(page.getByRole("main")).toContainText("IONOS SE, Elgendorfer Straße 57, 56410 Montabaur");
+  await expect(page.getByRole("main")).not.toContainText("gmail.com");
   await expect(page.getByText("Vercel Web Analytics und Speed Insights sind nicht aktiviert")).toBeVisible();
 });
 

@@ -79,7 +79,7 @@ Weitere Unterlagen von Scalable Capital:
 
 Sie haben zwei Möglichkeiten:
 
-- Live-Seite: https://depotdoktor.vercel.app/projects/depotdoktor (Stand des Zweigs `main`).
+- Live-Seite: https://depotdoktor.mirkandeniz.de/projects/depotdoktor (Stand des Zweigs `main`).
 - Lokal im Repo: `pnpm install`, dann `pnpm dev` und http://localhost:3000/projects/depotdoktor öffnen. Notieren Sie für das Protokoll den Commit (`git rev-parse --short HEAD`) und ob es nicht committete Änderungen gibt.
 
 In beiden Fällen liest der Browser die Datei selbst; DepotDoktor schickt keine Anfrage mit Dateiinhalten ab, auch nicht an den eigenen Server, und die Content-Security-Policy (`connect-src 'self' data:`, `form-action 'self'`) sperrt Anfragen an fremde Server. Ein Playwright-Test prüft das bei jedem Pull Request. Es gibt keine Anmeldung und keine Speicherung, weder auf dem Server noch im Browser.

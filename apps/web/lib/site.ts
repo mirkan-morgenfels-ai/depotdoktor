@@ -17,7 +17,19 @@ export interface NavLink {
   external: boolean;
 }
 
-export const DEFAULT_SITE_URL = "https://depotdoktor.vercel.app";
+export const DEFAULT_SITE_URL = "https://depotdoktor.mirkandeniz.de";
+
+export const LEGACY_HOSTS: readonly string[] = ["depotdoktor.vercel.app", "ai-project-1-web.vercel.app"];
+
+export const PROJECT_PATH = "/projects/depotdoktor";
+
+export const PORTFOLIO_URL = "https://mirkandeniz.de";
+
+export const PORTFOLIO_LABEL = "mirkandeniz.de";
+
+export const PORTFOLIO_PROJECTS_URL = `${PORTFOLIO_URL}/projekte`;
+
+export const PORTFOLIO_HOME_URL = `${PORTFOLIO_URL}/#start`;
 
 export const SITE_NAME = "DepotDoktor";
 
@@ -27,8 +39,6 @@ export const GITHUB_PROFILE_URL = "https://github.com/mirkan-morgenfels-ai";
 
 export const REPO_URL = "https://github.com/mirkan-morgenfels-ai/depotdoktor";
 
-export const HOME_DESCRIPTION =
-  "Drei Portfolio-Projekte zu Finanzdaten, maschinellem Lernen und Graph-ML: DepotDoktor, KontoKlar und NetzRadar, jeweils mit öffentlichem Quellcode auf GitHub.";
 
 export const PROJECTS: readonly Project[] = [
   {
@@ -40,7 +50,7 @@ export const PROJECTS: readonly Project[] = [
     title: "DepotDoktor",
     description:
       "Depot-Steuer- und Performance-Analyzer für Broker-CSV-Exporte. Die Auswertung läuft vollständig im Browser.",
-    href: "/projects/depotdoktor",
+    href: PROJECT_PATH,
     external: false,
     repo: REPO_URL,
   },
@@ -52,7 +62,7 @@ export const PROJECTS: readonly Project[] = [
     kicker: "Projekt 02",
     title: "KontoKlar",
     description: "Kategorisiert Bankumsätze aus CSV-Exporten und zeigt, wohin das Geld geht.",
-    href: "https://kontoklar-eight.vercel.app/projects/kontoklar",
+    href: "https://kontoklar.mirkandeniz.de/projects/kontoklar",
     external: true,
     repo: "https://github.com/mirkan-morgenfels-ai/kontoklar",
   },
@@ -65,16 +75,15 @@ export const PROJECTS: readonly Project[] = [
     title: "NetzRadar",
     description:
       "Anomalie-Erkennung in Transaktionsnetzwerken: klassische Baselines und Gradient Boosting gegen Graph Neural Networks, mit zeitlichem Split und PR-AUC.",
-    href: "https://netzradar.vercel.app/projects/netzradar",
+    href: "https://netzradar.mirkandeniz.de/projects/netzradar",
     external: true,
     repo: "https://github.com/mirkan-morgenfels-ai/netzradar",
   },
 ];
 
 export const NAV_LINKS: readonly NavLink[] = [
-  { href: "/", label: "Start", external: false },
   ...PROJECTS.map((project) => ({ href: project.href, label: project.title, external: project.external })),
-  { href: GITHUB_PROFILE_URL, label: "GitHub", external: true },
+  { href: PORTFOLIO_PROJECTS_URL, label: "Alle Projekte", external: true },
 ];
 
 export const LEGAL_LINKS: readonly NavLink[] = [
@@ -83,7 +92,7 @@ export const LEGAL_LINKS: readonly NavLink[] = [
   { href: "/nutzungsbedingungen", label: "Nutzungsbedingungen", external: false },
 ];
 
-export const SITEMAP_PATHS: readonly string[] = ["/", "/projects/depotdoktor", ...LEGAL_LINKS.map((link) => link.href)];
+export const SITEMAP_PATHS: readonly string[] = [PROJECT_PATH, ...LEGAL_LINKS.map((link) => link.href)];
 
 export function repoUrl(path = "", kind: "blob" | "tree" = "blob"): string {
   const trimmed = path.replace(/^\/+/, "");

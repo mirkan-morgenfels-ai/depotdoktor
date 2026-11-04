@@ -28,16 +28,6 @@ const COURSE_PATH = COURSE.map(([x, y], index) => `${index === 0 ? "M" : "L"}${x
 
 const MARKERS = [4, 10, 16, 21];
 
-export function BrandMark({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false" className={className}>
-      <path d="M16 1.75 30.25 16 16 30.25 1.75 16Z" fill="none" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M8.4 19.6 12.2 15.9 15 17.6 18.8 13.3 20.9 14.5 23 12.1" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="23" cy="12.1" r="1.35" fill="currentColor" />
-    </svg>
-  );
-}
-
 export function HeroOrnament({ idPrefix, className }: { idPrefix: string; className?: string }) {
   const fillId = `${idPrefix}-fill`;
   const fadeId = `${idPrefix}-fade`;

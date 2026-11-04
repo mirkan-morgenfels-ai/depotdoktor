@@ -243,7 +243,7 @@ describe("PDF-Daten", () => {
       "Zinsen Konto",
     ]);
     expect(data.metrics.slice(8).map((m) => m.value)).toEqual(["3,00\u00A0€", "6,50\u00A0€", "10.000,00\u00A0€", "3,21\u00A0€"]);
-    expect(data.footerLine).toBe("Erstellt mit DepotDoktor · depotdoktor.vercel.app/projects/depotdoktor");
+    expect(data.footerLine).toBe("Erstellt mit DepotDoktor · depotdoktor.mirkandeniz.de/projects/depotdoktor");
   });
 
   test("Quellzeile nennt übersprungene Zeilen, Hinweise zum Einlesen stehen unter den Hinweisen", () => {

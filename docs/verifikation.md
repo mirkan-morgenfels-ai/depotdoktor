@@ -942,3 +942,36 @@ Prüfung am 23.10.2026:
 | `pnpm build` | grün, alle Routen statisch |
 | `pnpm test:e2e` mit `CI=true` | 31 Tests grün im ersten Durchlauf (`depotdoktor.spec.ts` 17, `site.spec.ts` 14), darin axe-core ohne Verstöße; danach Port 3812 frei |
 | `pnpm audit --prod` | keine Meldung |
+
+## Anbindung an mirkandeniz.de 01.11.2026
+
+Anlass: Wer von mirkandeniz.de (Website des Autors mit Werdegang und Projektübersicht) auf „Live ansehen“ ging, landete hier ohne Weg zurück; die Kopfzeile führte nur zu einer eigenen zweiten Projektübersicht. Der Autor wollte jederzeit zwischen Website und Projekten wechseln können und alles unter seiner Domain.
+
+Entscheidungen des Autors vom 01.11.2026 (vorgelegt mit Empfehlung):
+
+1. Subdomains statt Unterordnern oder einer Zusammenlegung: `depotdoktor.mirkandeniz.de`, `kontoklar.mirkandeniz.de`, `netzradar.mirkandeniz.de`. Die drei Projekte bleiben eigenständig (eigene Repos, Tests, Deployments, Datenschutzerklärungen). Unterordner (`mirkandeniz.de/depotdoktor`) hätten `basePath` in allen drei Apps, Weiterleitungen über die Website und bei KontoKlar Anpassungen an API, Bot-Schutz und Rate-Limit verlangt.
+2. Die Startadresse leitet direkt auf das Projekt; die Projektübersicht gibt es nur noch auf mirkandeniz.de/projekte.
+3. Live geht das zusammen mit mirkandeniz.de, damit der Rückweg nicht auf deren Wartungsseite führt.
+
+Umsetzung (gleich in K1, K2 und K3):
+
+- Kopf: Monogramm „MD“ (Glyphenpfade wie auf mirkandeniz.de, `components/site/Monogram.tsx`), Wortmarke „Mirkan Deniz“ und darunter „← mirkandeniz.de“ als ein Link auf https://mirkandeniz.de/#start (mit der Sprungmarke zeigt die Website ihre Startanimation beim Zurückkommen nicht erneut; Fuß und 404-Seite ebenso); rechts DepotDoktor, KontoKlar, NetzRadar und „Alle Projekte“ (https://mirkandeniz.de/projekte). „Start“ und „GitHub“ entfallen in der Kopfzeile; der Quellcode bleibt in Hero, Projektseite und Fuß verlinkt.
+- Fuß: dasselbe Markenzeichen, dazu „Ein Projekt von Mirkan Deniz Günkaya. Werdegang, alle Projekte und Kontakt auf mirkandeniz.de.“
+- `next.config.ts`: `/` leitet dauerhaft (308) auf `/projects/depotdoktor`; Anfragen an die alten Hosts `depotdoktor.vercel.app` und `ai-project-1-web.vercel.app` leiten dauerhaft auf dieselbe Adresse unter `depotdoktor.mirkandeniz.de`. Vorschau-Adressen von Vercel sind nicht betroffen. Zeigt `NEXT_PUBLIC_SITE_URL` auf einen alten Host, entfällt dessen Regel.
+- Startseite mit `HomeHero` und `ProjectCards` entfernt, Sitemap ohne `/`; 404-Seite mit „Zu DepotDoktor“ und „Zur Website mirkandeniz.de“, Fehlerseite mit „Zu DepotDoktor“.
+- Datenschutzerklärung, Abschnitt 6: nennt jetzt auch den Link auf die Website mirkandeniz.de. Stand der Rechtstexte 01.11.2026. Die Seite lädt und überträgt nichts Neues.
+- Die Fußzeile des PDF nennt die neue Adresse `depotdoktor.mirkandeniz.de/projects/depotdoktor`.
+- Kontaktadresse in Impressum und Datenschutzerklärung seit 01.11.2026 `guenkaya@mirkandeniz.de` statt der privaten Gmail-Adresse (Entscheidung des Autors vom 01.11.2026, wie auf mirkandeniz.de; gleich in K1 bis K3); der Abschnitt „Kontakt per E-Mail“ der Datenschutzerklärung nennt IONOS SE als Anbieter des Postfachs (Auftragsverarbeitung nach Art. 28 DSGVO).
+- Überleitung (Wunsch des Autors vom 01.11.2026, Gegenstück zu „Live ansehen“ auf mirkandeniz.de): Links zu mirkandeniz.de und zu den Schwesterprojekten zeigen 560 ms lang einen Navy-Vorhang mit „Zurück zur Website · Mirkan Deniz“ oder „Weiter zum Projekt · <Name>“, dann folgt der echte Klick auf den Link (so gilt `rel="noopener noreferrer"` weiter). Keine Überleitung bei reduzierter Bewegung, bei Strg, Cmd, Umschalt, Alt oder mittlerer Maustaste. `components/site/PortfolioTransition.tsx` und `transition.ts`, gleich in K1 bis K3. Die Seite lädt und überträgt dadurch nichts Neues.
+
+Voraussetzung vor dem Merge: Domain im Vercel-Projekt hinzugefügt, CNAME bei IONOS gesetzt, Vercel zeigt „Valid Configuration“.
+
+Prüfung am 01.11.2026:
+
+| Prüfung | Ergebnis |
+|---|---|
+| `pnpm typecheck` (einschließlich E2E-Dateien) | grün |
+| `pnpm lint` (alle sechs Pakete) | grün |
+| `pnpm test` | 293 Tests grün (csv 50, pdf 2, web 241); neu sind Tests zu Rückweg, alten Hosts und dem Ziel der Überleitung, entfallen ist der Test zur Startseiten-Beschreibung |
+| `pnpm build` | grün, alle Routen statisch, `/` als Weiterleitung |
+| `pnpm test:e2e` mit `CI=true` | 34 Tests grün (`depotdoktor.spec.ts` 17, `site.spec.ts` 17), darin Weiterleitung von `/` und vom alten Host (per `Host`-Kopfzeile), Kopf- und Fußlinks, Kontaktadresse und IONOS-Hinweis auf den Rechtsseiten, die Überleitung zu mirkandeniz.de und zu KontoKlar (mit Attrappen beider Adressen; synthetische Klicks mit Zusatztaste und mit reduzierter Bewegung werden nicht abgefangen), axe-core ohne Verstöße |
