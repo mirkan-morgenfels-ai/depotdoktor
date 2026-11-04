@@ -31,9 +31,6 @@ export const KAPITALERTRAGSTEUER = new Decimal("0.25");
 export const SOLIDARITAETSZUSCHLAG = new Decimal("0.055");
 export const ABGELTUNGSTEUER_RATE = KAPITALERTRAGSTEUER.times(new Decimal(1).plus(SOLIDARITAETSZUSCHLAG));
 
-export const SPARERPAUSCHBETRAG_SINGLE = new Decimal("1000");
-export const SPARERPAUSCHBETRAG_JOINT = new Decimal("2000");
-
 export function basiszinsFor(year: number): Decimal | null {
   return BASISZINS[year] ?? null;
 }
