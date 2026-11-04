@@ -1,6 +1,6 @@
 # Verifikation und offene Punkte (K1 DepotDoktor)
 
-Stand: 23.10.2026 (keine Vorbelegung als Aktienfonds bei ETF und Fonds, deren Name auf einen Renten-, Geldmarkt-, Misch-, Immobilien- oder Rohstofffonds hindeutet, ohne Änderung an Rechenwegen, siehe den letzten Abschnitt; davor die Fondstyp-Vorbelegung bei Derivaten und Cash sowie Hinweis „nur PRIME+“ im Upload-Feld, Abschnitt „Fondstyp bei Derivaten und Cash, Hinweis PRIME+ 22.10.2026“; davor die Anleitung für die Prüfung an echten Exporten in [pruefung-echte-exporte.md](pruefung-echte-exporte.md), ohne Änderung an Code und Rechenwegen, Abschnitt „Anleitung für die Prüfung an echten Exporten 20.10.2026“; davor die Framework-Migration auf Next.js 16, ESLint 10 und Vitest 5 ohne fachliche Änderung, Abschnitt „Framework-Migration 17.10.2026“; fachlich zuletzt die restlichen Entscheidungen und der Abgleich mit den Rechenbeispielen des BMF im Abschnitt „Restliche Entscheidungen 08.10.2026“; davor CSV-Export für deutsches Excel; zur Steuerlogik die Abschnitte „Nachkontrolle 07.10.2026“ und „Nachbesserung 07.10.2026“). Quellen zur Steuerlogik gehören hierher, nicht in den Code.
+Stand: 04.11.2026 (Livegang unter depotdoktor.mirkandeniz.de und Aufräumen, letzter Abschnitt; davor die Anbindung an mirkandeniz.de vom 01.11.2026 und, ohne Änderung an Rechenwegen, keine Vorbelegung als Aktienfonds bei ETF und Fonds, deren Name auf einen Renten-, Geldmarkt-, Misch-, Immobilien- oder Rohstofffonds hindeutet, Abschnitt „Fondstyp nach dem Fondsnamen 23.10.2026“; davor die Fondstyp-Vorbelegung bei Derivaten und Cash sowie Hinweis „nur PRIME+“ im Upload-Feld, Abschnitt „Fondstyp bei Derivaten und Cash, Hinweis PRIME+ 22.10.2026“; davor die Anleitung für die Prüfung an echten Exporten in [pruefung-echte-exporte.md](pruefung-echte-exporte.md), ohne Änderung an Code und Rechenwegen, Abschnitt „Anleitung für die Prüfung an echten Exporten 20.10.2026“; davor die Framework-Migration auf Next.js 16, ESLint 10 und Vitest 5 ohne fachliche Änderung, Abschnitt „Framework-Migration 17.10.2026“; fachlich zuletzt die restlichen Entscheidungen und der Abgleich mit den Rechenbeispielen des BMF im Abschnitt „Restliche Entscheidungen 08.10.2026“; davor CSV-Export für deutsches Excel; zur Steuerlogik die Abschnitte „Nachkontrolle 07.10.2026“ und „Nachbesserung 07.10.2026“). Quellen zur Steuerlogik gehören hierher, nicht in den Code.
 
 ## Prüfstand der Steuerlogik
 
@@ -951,7 +951,7 @@ Entscheidungen des Autors vom 01.11.2026 (vorgelegt mit Empfehlung):
 
 1. Subdomains statt Unterordnern oder einer Zusammenlegung: `depotdoktor.mirkandeniz.de`, `kontoklar.mirkandeniz.de`, `netzradar.mirkandeniz.de`. Die drei Projekte bleiben eigenständig (eigene Repos, Tests, Deployments, Datenschutzerklärungen). Unterordner (`mirkandeniz.de/depotdoktor`) hätten `basePath` in allen drei Apps, Weiterleitungen über die Website und bei KontoKlar Anpassungen an API, Bot-Schutz und Rate-Limit verlangt.
 2. Die Startadresse leitet direkt auf das Projekt; die Projektübersicht gibt es nur noch auf mirkandeniz.de/projekte.
-3. Live geht das zusammen mit mirkandeniz.de, damit der Rückweg nicht auf deren Wartungsseite führt.
+3. Live geht das zusammen mit mirkandeniz.de, damit der Rückweg nicht auf deren Wartungsseite führt. (Am 04.11.2026 auf Wunsch des Autors geändert: Die Projekte gingen vor der Website live, siehe „Livegang und Aufräumen 04.11.2026“.)
 
 Umsetzung (gleich in K1, K2 und K3):
 
@@ -975,3 +975,18 @@ Prüfung am 01.11.2026:
 | `pnpm test` | 293 Tests grün (csv 50, pdf 2, web 241); neu sind Tests zu Rückweg, alten Hosts und dem Ziel der Überleitung, entfallen ist der Test zur Startseiten-Beschreibung |
 | `pnpm build` | grün, alle Routen statisch, `/` als Weiterleitung |
 | `pnpm test:e2e` mit `CI=true` | 34 Tests grün (`depotdoktor.spec.ts` 17, `site.spec.ts` 17), darin Weiterleitung von `/` und vom alten Host (per `Host`-Kopfzeile), Kopf- und Fußlinks, Kontaktadresse und IONOS-Hinweis auf den Rechtsseiten, die Überleitung zu mirkandeniz.de und zu KontoKlar (mit Attrappen beider Adressen; synthetische Klicks mit Zusatztaste und mit reduzierter Bewegung werden nicht abgefangen), axe-core ohne Verstöße |
+
+## Livegang und Aufräumen 04.11.2026
+
+Livegang: Domain `depotdoktor.mirkandeniz.de` im Vercel-Projekt eingetragen, CNAME bei IONOS gesetzt, Zertifikat gültig; PR #12 (`feat/mirkandeniz`) am 04.11.2026 mit grüner CI gemergt (3e6cecc), Produktions-Deployment erfolgreich. Abweichend von Entscheidung 3 vom 01.11.2026 ging das Projekt auf Wunsch des Autors vor der Website mirkandeniz.de live; diese stand am 04.11.2026 noch im Wartungsmodus (`/` und `/projekte` leiten auf `/wartung`), bis zu ihrem Start führen Rückweg, „Alle Projekte“ und der Link auf der 404-Seite dorthin.
+
+| Prüfung am 04.11.2026 | Ergebnis |
+|---|---|
+| `https://depotdoktor.mirkandeniz.de/projects/depotdoktor` | 200, Canonical auf die Subdomain, Kopf- und Fußlinks auf mirkandeniz.de und die Schwesterprojekte, keine Konsolenfehler |
+| `https://depotdoktor.vercel.app/` und `/impressum` | 308 auf dieselbe Adresse unter `depotdoktor.mirkandeniz.de` |
+| `https://depotdoktor.mirkandeniz.de/` | 308 auf `/projects/depotdoktor` |
+| Impressum und Datenschutzerklärung | Kontakt `guenkaya@mirkandeniz.de`, IONOS-Hinweis, keine Gmail-Adresse, Stand 01.11.2026 |
+
+Aufräumen (`chore/golive-aufraeumen`, abgestimmt mit K2 und K3): `.gitignore` um `.claude/`, `.turbo/` und `Thumbs.db` ergänzt (wie K2 und K3). Entfernt, weil nach dem Wegfall der Startseite nichts mehr sie las: die Projektfelder `code`, `description` und `repo` in `lib/site.ts` samt ihren Tests, `OPERATOR.siteName`, `BUTTON_NAVY` und `BUTTON_OUTLINE_DARK` in `buttons.ts` (in K1 bis K3 weiter byte-gleich), `--shadow-float` und `.draw-line-late` in `globals.css`, `Card` in `packages/ui`; außerdem seit Beginn ungenutzt `sum` in `money.ts`, `isZeroDecimal` in `packages/csv` und die Konstanten zum Sparerpauschbetrag (in v1 nicht angewandt, siehe README „Kennzahlen und Steuerlogik“). Die beiden Überleitungstests halten die Antwort der Attrappe zurück, bis der Vorhang geprüft ist; vorher konnte die Seite unter Last nach 560 ms schon weitergegangen sein. Rechenwege, Rechtstexte und Report unverändert.
+
+Prüfung am 04.11.2026 auf `chore/golive-aufraeumen`: `pnpm typecheck`, `pnpm lint` und `pnpm build` grün, `pnpm test` 292 Tests (csv 50, pdf 2, web 240; entfallen ist der Test der nicht mehr angezeigten Projektbeschreibungen), `pnpm test:e2e` mit `CI=true` 34 Tests grün.

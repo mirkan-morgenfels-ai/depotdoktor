@@ -44,10 +44,6 @@ export function negateDecimal(value: DecimalString): DecimalString {
   return value.startsWith("-") ? value.slice(1) : `-${value}`;
 }
 
-export function isZeroDecimal(value: DecimalString): boolean {
-  return value === "0" || value === "-0";
-}
-
 export function applySignConvention(type: TransactionType, amount: DecimalString): DecimalString {
   switch (type) {
     case "buy":
