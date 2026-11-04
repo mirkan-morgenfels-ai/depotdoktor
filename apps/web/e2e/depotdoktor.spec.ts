@@ -714,11 +714,21 @@ test("Mobil 390 px: Reiterleiste einzeilig, Steuerergebnis ohne seitliches Scrol
 
   for (const tab of ["Steuer", "Transaktionen", "Performance", "Allokation"]) {
     await page.getByRole("tab", { name: tab }).click();
-    const panel = page.getByRole("tabpanel");
-    const regions = panel.locator('[role="region"][data-overflowing]');
-    await expect(regions.first()).toBeAttached();
-    const overflowing = await panel.locator('[role="region"][data-overflowing="true"]').count();
-    await expect(panel.getByText("Tabelle seitlich wischen", { exact: true }), tab).toHaveCount(overflowing);
+    const panel = page.getByRole("tabpanel", { name: tab, exact: true });
+    await expect(panel.locator('[role="region"][data-overflowing]').first()).toBeAttached();
+    await expect
+      .poll(
+        () =>
+          panel.evaluate((element) => {
+            const regions = Array.from(element.querySelectorAll('[role="region"][data-overflowing]'));
+            const measured = regions.every((region) => region.getAttribute("data-overflowing") === String(region.scrollWidth - region.clientWidth > 1));
+            const overflowing = regions.filter((region) => region.getAttribute("data-overflowing") === "true").length;
+            const hints = Array.from(element.querySelectorAll("p")).filter((hint) => hint.textContent?.trim() === "Tabelle seitlich wischen").length;
+            return measured ? hints - overflowing : null;
+          }),
+        { message: `${tab}: Wischhinweise minus Bereiche mit Überlauf, sobald jeder Bereich gemessen ist` },
+      )
+      .toBe(0);
     const scrollWidth = await page.evaluate(() => (document.scrollingElement ?? document.documentElement).scrollWidth);
     expect(scrollWidth, tab).toBeLessThanOrEqual(390);
   }
