@@ -12,4 +12,7 @@ playwright-report/
 *.tsbuildinfo
 .vercel
 next-env.d.ts
+.turbo/
+Thumbs.db
+.claude/
 CLAUDE.local.md

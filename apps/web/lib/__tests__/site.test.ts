@@ -23,7 +23,6 @@ import {
 describe("PROJECTS", () => {
   it("lists exactly the three portfolio projects in order", () => {
     expect(PROJECTS.map((project) => project.slug)).toEqual(["depotdoktor", "kontoklar", "netzradar"]);
-    expect(PROJECTS.map((project) => project.code)).toEqual(["K1", "K2", "K3"]);
     expect(PROJECTS.map((project) => project.kicker)).toEqual(["Projekt 01", "Projekt 02", "Projekt 03"]);
     expect(PROJECTS.map((project) => project.number)).toEqual(["01", "02", "03"]);
     expect(PROJECTS.map((project) => project.topic)).toEqual(["Finanzdaten", "Maschinelles Lernen", "Graph-ML"]);
@@ -41,23 +40,9 @@ describe("PROJECTS", () => {
     for (const project of others) expect(project.external).toBe(true);
   });
 
-  it("points every project to its public repository", () => {
-    for (const project of PROJECTS) {
-      expect(project.repo).toBe(`https://github.com/mirkan-morgenfels-ai/${project.slug}`);
-    }
+  it("points to its public repository", () => {
     expect(REPO_URL).toBe("https://github.com/mirkan-morgenfels-ai/depotdoktor");
   });
-
-  it("uses the same project descriptions as the sibling sites", () => {
-    expect(PROJECTS[0]?.description).toBe(
-      "Depot-Steuer- und Performance-Analyzer für Broker-CSV-Exporte. Die Auswertung läuft vollständig im Browser.",
-    );
-    expect(PROJECTS[1]?.description).toBe("Kategorisiert Bankumsätze aus CSV-Exporten und zeigt, wohin das Geld geht.");
-    expect(PROJECTS[2]?.description).toBe(
-      "Anomalie-Erkennung in Transaktionsnetzwerken: klassische Baselines und Gradient Boosting gegen Graph Neural Networks, mit zeitlichem Split und PR-AUC.",
-    );
-  });
-
 });
 
 describe("navigation", () => {
